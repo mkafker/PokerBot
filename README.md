@@ -1,4 +1,4 @@
 # PokerBot
 Barely know her.
 
-For various pokerings, and other such things as this.
+For various pokerings, and other such things as this. Etc. etc.
