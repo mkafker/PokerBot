@@ -26,56 +26,136 @@ namespace Poker {
                 table->pot          = 0;
             }
             void doRound() {
-                std::list<Player*> activePlayers       = table->getPlayersInOrder();
+                std::list<Player*> activePlayers         
+                        = table->getPlayersInOrder();
+                std::unordered_map<Player*, PlayerMove> playerStatuses;                   // holds playing, all-in, or fold status
                 Player* winningPlayer;
+                table->resetPlayerHands();
+
                 // deal two cards to all
                 table->dealAllPlayersCards();
 
                 table->street = 0;      // preflop
+                table->currentBet   = table->bigBlind;
+                table->pot          = table->currentBet;
 
                 while( table->street < 4) {
-                    // do community card dealing
-                    table->dealCommunityCards();
-                    table->currentBet   = 0;
-                    table->pot          = 0;
-                    bool keepgoing = true;                                                                              // indicates we're ready for the next phase of the game
-                    while(keepgoing) {   
-                        print();
-                        keepgoing = false;
-                        std::list<Player*>::iterator i = activePlayers.begin();
-                        while (i != activePlayers.end()) {
-                            Player* P = *i;
-                            PlayerMove Pmove = P->makeAIMove(table);
-                            const bool moveOK = sanityCheckMove(*P, Pmove);                                             // also clamps to correct bet values
-                            if( Pmove.move == Move::MOVE_FOLD) {
-                                i = activePlayers.erase(i);
-                            }
-                            else {
-                                if( Pmove.move == Move::MOVE_RAISE) { keepgoing = true; }
-                                table->currentBet += Pmove.bet_amount;
-                                i++;
-                            }
-                        }
-                    }
-                    table->pot += table->currentBet;
+                    activePlayers = table->getPlayersInOrder(activePlayers, false);
+                    std::cout << "welcome to phase " << table->street << std::endl;
                     
-                    if ( activePlayers.size() == 1) {
-                        winningPlayer = activePlayers.front();
-                    }
-                    if ( activePlayers.size() == 2) {
-                        // showdown
-                        // Form hands from community cards and player cards
-                        auto it = activePlayers.begin();
-                        while( it != activePlayers.end()) {
+                    table->dealCommunityCards();
+                    
+                    // only do betting round if there are at least two active players
+                    if( activePlayers.size() >= 2) {
+                        bool keepgoing = true;                                                            // indicates we're ready for the next phase of the game
+                        while(keepgoing) {
+                            std::cout << "===================" << std::endl;
+                            keepgoing = false;
+                            std::list<Player*>::iterator i = activePlayers.begin();
+                            const int currentBetBeforeRound = table->currentBet;
+                            while (i != activePlayers.end()) {
+                                Player* P = *i;
+                                if( P->position == PlayerPosition::POS_BB && table->street != 0) {
+                                    table->pot += table->bigBlind;
+                                    P->bankroll -= table->bigBlind;
+                                }
+                                else if( P->position == PlayerPosition::POS_SB && table->street != 0 ) {
+                                    table->pot += table->smallBlind;
+                                    P->bankroll -= table->smallBlind;
+                                }
+                                PlayerMove Pmove = P->makeAIMove(table);
+                                // sanitize inputs
+                                //const bool moveOK = sanityCheckMove(*P, Pmove);
+                                P->printPlayerMove(Pmove);
 
+                                const bool allIn = (Pmove.bet_amount == P->bankroll);
+                                const bool allInOrRaise = Pmove.move == Move::MOVE_RAISE || allIn;
+                                if( Pmove.move == Move::MOVE_RAISE || Pmove.move == Move::MOVE_ALLIN) table->currentBet += Pmove.bet_amount;
+
+                                table->pot       += Pmove.bet_amount;
+                                
+
+                                // remove all-in or folded players from play
+                                if( allIn ) playerStatuses[P] = Pmove;
+                                std::cout << "Current bet: " << table->currentBet << std::endl;
+                                std::cout << "Current pot: " << table->pot << std::endl;
+
+                                P->bankroll -= Pmove.bet_amount;
+
+                                // remove player from game if folded or all in
+                                if( Pmove.move == Move::MOVE_FOLD or allIn) {
+                                    i = activePlayers.erase(i);
+                                }
+                                else {
+                                    // Do another round the table only if somebody raised
+                                    if( currentBetBeforeRound != table->currentBet ) { keepgoing = true; }
+                                    i++;
+                                }
+                            }
+                            std::cout << "keepgoing = " << keepgoing << std::endl;
                         }
                     }
+                    // advance game
+                    table->street++;
+                }
 
-                    table->street++;    // advance phase of the game
+                std::cout << "showdown time, activePlayers = " << std::endl;
+                // add all in players back to activePlayers
+
+                std::list<Player>::iterator it = table->player_list.begin();
+                while(it != table->player_list.end()) {
+                    Player P = *it;
+                    if( playerStatuses[&P].move == Move::MOVE_ALLIN ) {
+                        activePlayers.push_back(&P);
+                        std::cout << P.playerID << " (all in)" << std::endl;
+                    }
+                    std::cout << P.playerID << std::endl;
+                    it++;
+                }
+
+                winningPlayer = determineWinner(activePlayers);
+                if( winningPlayer ) {
+                    // finally, reward player
+                    winningPlayer->bankroll += table->pot;
+                    std::cout << "Guess who won! Player " << winningPlayer->playerID << std::endl;
+                }
+                else {
+                    std::cout << "Draw, returning bets!" << std::endl;
+                    // else, draw
+                    for( Player* P : activePlayers ) 
+                        P->bankroll += playerStatuses[P].bet_amount;
                 }
                 
+                rotatePlayers();
             }
 
+            
+            Player* determineWinner(std::list<Player*> players) {
+                Player* winningPlayer;
+                if ( players.size() == 1) {
+                        return players.front();
+                    }
+                else if ( players.size() >= 2) {
+                    // showdown
+                    // Form hands from community cards and player cards
+                    auto it = players.begin();
+                    std::unordered_map<Hand*, Player*> playerHandMap;
+                    std::list<Hand*> handList;
+                    while( it != players.end()) {
+                        Player* P = *it;
+                        const auto Phand = &P->hand;
+                        handList.push_back(Phand);
+                        Phand->append(table->community_cards);
+                        playerHandMap[Phand] = P;
+                        it++;
+                    }
+                    Hand* winningHand = Hand::showdown(handList);
+                    return playerHandMap[winningHand];
+                }
+                else {
+                    return nullptr;
+                }
+            }
             auto get_table() { return table; }
             bool sanityCheckMove(Player& P, PlayerMove& move) {
                 // sanity checks player moves, and corrects them if it can
@@ -85,7 +165,8 @@ namespace Poker {
                 const bool didCall = move.move == Move::MOVE_CALL;
                 const bool didRaise = move.move == Move::MOVE_RAISE;
                 const bool didFold  = move.move == Move::MOVE_FOLD;
-                const bool nobodyRaisedYet = table->currentBet != table->get_BB();
+                const bool allIn    = move.move == Move::MOVE_ALLIN;
+                const bool nobodyRaisedYet = table->currentBet == table->get_BB();
 
                 if(isBB && nobodyRaisedYet && (move.bet_amount != table->get_BB())) {
                     move.bet_amount = table->get_BB();
@@ -103,15 +184,31 @@ namespace Poker {
                     move.bet_amount = table->currentBet;
                     return false;
                 }
+                if( table->currentBet >= P.bankroll ) {
+                    move.bet_amount = P.bankroll;
+                    move.move = Move::MOVE_ALLIN;
+                    return false;
+                }
+                if( move.bet_amount < 0 ) {
+                    move.bet_amount = 0;
+                    move.move = Move::MOVE_FOLD;
+                    return false;
+                }
+                return true;
             }
-            
+            void rotatePlayers() {
+                for(auto &P : table->player_list) {
+                    P.incPosition();
+                }
+            }
             void print() {
                 for( Player& p : table->player_list ) {
                     std::cout << std::endl;
-                    std::cout << "Player at seat " << p.position  << "\t bank: " << p.bankroll << "\t hand: " << p.hand << std::endl;
+                    std::cout << "Player " << p.playerID << " at seat " << p.position  << "\t bank: " << p.bankroll << "\t hand: " << p.hand << std::endl;
                 }
                 std::cout << "Community cards: " << table->community_cards << std::endl;
                 std::cout << "Pot: " << table->pot << std::endl;
+                std::cout << "Current Bet: " << table->currentBet << std::endl;
             }
 
     };

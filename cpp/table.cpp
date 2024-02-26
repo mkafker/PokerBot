@@ -33,8 +33,8 @@ namespace Poker {
                 // Deals everyone two cards
                 for(Player& p : player_list) {
                     p.hand.clear();
-                    p.hand.push_back(deck->pop_card());
-                    p.hand.push_back(deck->pop_card());
+                    p.hand.add(deck->pop_card());
+                    p.hand.add(deck->pop_card());
                 }
             }
             Player& Table::get_player_by_position(PlayerPosition p) {
@@ -45,25 +45,35 @@ namespace Poker {
                 throw std::runtime_error("No player is UTG! Something went terribly wrong.");
             }
             
-            std::list<Player*> Table::getPlayersInOrder(std::list<Player*> plist) {
+            std::list<Player*> Table::getPlayersInOrder(std::list<Player*> plist, bool startOfRound) {
                 // returns a list of pointers to players in the correct (game) order
+                // returns a sorted list of the table players if startOfRound is true
+                // 
                 auto comp = [](Player* a, Player* b) -> bool { return a->getPosition() < b->getPosition(); };
-                if( !plist.empty() ) {
+                if( !plist.empty() && !startOfRound ) {
                     plist.sort( comp );
                     return plist;
                 }
-                else {
+                else if (startOfRound) {      // Problem: plist is empty if everybody if folded or all in. The mechanism below is supposed to be used only at the start of the game!
                     std::list<Player*> ret;
-                    ret.resize(player_list.size());
+                    //ret.resize(player_list.size());
                     std::transform(player_list.begin(), player_list.end(), std::back_inserter(ret), [](Player& a) { return &a; } );
                     ret.sort( comp );
                     return ret;
                 }
+                return std::list<Player*>();
             }
 
 
             void Table::set_num_players(int n) {
                 n_players = n;                  // effectively trims the last n_players - n players from the game
+            }
+
+            void Table::resetPlayerHands() {
+                // clears all player hands
+                for(auto P : player_list) {
+                    P.resetHand();
+                }
             }
 
     

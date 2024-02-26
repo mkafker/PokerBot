@@ -132,20 +132,22 @@ namespace Poker {
                 return HandRank::HIGH_CARD;
             }
 
-        Hand* showdown(std::list<Hand*> hands) {
+
+        static Hand* showdown(std::list<Hand*> hands) {
             std::list<Hand*>::iterator it = hands.begin();
             std::list<Hand*> topHands;
             auto handWinner = it;
-            auto rankA = (*it)->rank;
-            auto rankB = (*handWinner)->rank;
+            auto rankA = (*it)->get_hand_rank();
+            auto rankB = (*handWinner)->get_hand_rank();
             while(it != hands.end()) {
-                rankA = (*it)->rank;
+                rankA = (*it)->get_hand_rank();
                 if( rankA > rankB ) {
                     handWinner = it;
                     topHands.erase(topHands.begin(), topHands.end());
                     topHands.push_front(*handWinner);
                 }
                 else if( rankA == rankB ) topHands.push_front(*handWinner);
+                it++;
             }
 
             if( topHands.size() == 1) {return topHands.front(); } // return if no kicker required
@@ -155,6 +157,7 @@ namespace Poker {
             auto topit = topHands.begin();
             while( topit != topHands.end() ) {
                 (*topit)->sort_cards();
+                topit++;
             }
             topit = topHands.begin();
             auto winner = topit;            
@@ -164,8 +167,28 @@ namespace Poker {
                 auto cardVal = (*topit)->get_high_card();
                 if( cardVal->get_rank() > winnerCardVal->get_rank() ) return *topit;
                 if( cardVal->get_rank() < winnerCardVal->get_rank() ) return *winner;
+                topit++;
             }        
             return nullptr;
+        }
+
+        Card& operator[](int index) {
+            return cards[index];
+        }
+        const Card& operator[](int index) const {
+            return cards[index];
+        }
+        void clear() {
+            cards.clear();
+        }
+        void add(Card c) {
+            cards.push_back(c);
+        }
+        void append(std::vector<Poker::Card> h) {
+            cards.insert(cards.end(), h.begin(), h.end());
+        }
+        void print() {
+            for( Card& c : cards ) std::cout << c << " ";
         }
     };
     

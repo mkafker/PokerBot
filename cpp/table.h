@@ -31,11 +31,12 @@ namespace Poker {
             void dealAllPlayersCards();
             Player& get_player_by_position(PlayerPosition p);
             
-            std::list<Player*> getPlayersInOrder(std::list<Player*> plist = std::list<Player*>());
+            std::list<Player*> getPlayersInOrder(std::list<Player*> plist = std::list<Player*>(), bool startOfRound = true);
 
 
             void set_num_players(int n);
             void kick_player(int i);
             void rotatePlayers();
+            void resetPlayerHands();
     };
 }

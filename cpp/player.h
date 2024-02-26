@@ -10,7 +10,8 @@ namespace Poker{
         MOVE_UNDEF = -1,
         MOVE_FOLD = 0,
         MOVE_CALL = 1,
-        MOVE_RAISE = 2
+        MOVE_RAISE = 2,
+        MOVE_ALLIN = 3
     };
     struct PlayerMove {
         Move move   = Move::MOVE_UNDEF;
@@ -39,23 +40,28 @@ namespace Poker{
     class Player {
         public:
             int  bankroll;
-            std::vector<Card> hand;           // the two-card hand
+            int  playerID;                    // 
+            Hand hand;           // the two-card hand
             PlayerPosition  position;                      // seat the player is on. 0 = UTG, 1 = MP, 2 = CO, 3 = BTN, 4 = SB, 5 = BB 
             PlayerMove  move;
             
             Player();
             Player(int p);
             Player(PlayerPosition p);
-            Player(std::vector<Card> h);
+            Player(Hand h);
 
             PlayerPosition getPosition() const;
             void incPosition();
             PlayerMove makeAIMove(std::shared_ptr<Table> info);
+            void printPlayerMove(PlayerMove move);
+            void resetHand();
     };
 
     inline std::ostream& operator<<(std::ostream& stream, PlayerPosition &a) { 
         stream << PlayerPosition_to_String[a];
         return stream;
     }
+
+    
 }
 
