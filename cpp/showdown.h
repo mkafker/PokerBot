@@ -23,6 +23,11 @@ namespace Poker {
         FOUR_KIND = 8, 
         STRAIGHT_FLUSH = 9
     };
+    struct FullHandRank {                   // example: A A A K K 3 2
+        HandRank handrank;                  // full house
+        std::vector<Rank> maincards;        // {A, K}
+        std::vector<Rank> kickers;          // {3, 2}
+    };
     static std::unordered_map<HandRank, std::string> HandRank_to_String {
         {HandRank::UNDEF_HANDRANK, "UNDEF_Hand"},
         {HandRank::HIGH_CARD, "High card"},
@@ -37,35 +42,36 @@ namespace Poker {
     };
     class Hand {
         public:
-            HandRank                rank;           // the hand rank, as in the enum above
             std::vector<Card>       cards;          // array of cards, has between 2 and 7 cards
-            size_t                  num_cards;      // number of cards
+            size_t                  numCards;      // number of cards
+            FullHandRank            rank;           // full hand rank information            
             Hand() {
-                rank = HandRank::UNDEF_HANDRANK;
-                num_cards = 0;
+                numCards = 0;
             }
+            Hand(const Hand&) {};
             Hand(std::vector<Card> cards_in) {
                 cards = cards_in;
-                num_cards = cards_in.size();
-                //num_cards = std::count_if(cards.begin(), cards.end(), [](Card x){ x.get_rank_as_int() != -1;});
-                sort_cards();
-                rank = get_hand_rank();
+                numCards = cards_in.size();
+                sortCards();
             }
-
             Card* get_high_card() { 
                 auto ret = std::max(cards.begin(), cards.end());
                 return &*ret;
             }
-
-            void sort_cards() {
+            void sortCards() {
                 // Sort hand by card rank
                 std::sort(cards.begin(), cards.end(), [](Card a, Card b) { return a>b; });
             }
-            HandRank get_hand_rank() {
-                sort_cards();
+            FullHandRank getFullHandRank() const { return rank; }
+
+            static FullHandRank calcFullHandRank(Hand* hand) {
+                FullHandRank ret;
+                hand->sortCards();
+                const size_t num_cards = hand->numCards;
+                const auto   cards     = hand->cards;
                 std::unordered_map<Rank, size_t> rank_count;
                 std::unordered_map<Suit, size_t> suit_count;
-
+                // todo: redo this!!!!!
                 bool is_straight_flush = false;
                 bool is_four_kind = false;
                 bool is_full_house = false;
@@ -120,55 +126,59 @@ namespace Poker {
                 if ( two_count == 1 ) is_pair = true;
                 if ( (is_three_kind && is_pair) || (is_three_kind && is_two_pair) ) is_full_house = true;
                 
+                if ( is_straight_flush )         ret.handrank =  HandRank::STRAIGHT_FLUSH;
+                else if ( is_four_kind )         ret.handrank =  HandRank::FOUR_KIND;
+                else if ( is_full_house )        ret.handrank =  HandRank::FULL_HOUSE;
+                else if ( is_flush )             ret.handrank =  HandRank::FLUSH;
+                else if ( is_straight )          ret.handrank =  HandRank::STRAIGHT;
+                else if ( is_three_kind )        ret.handrank =  HandRank::THREE_KIND;
+                else if ( is_two_pair )          ret.handrank =  HandRank::TWO_PAIR;
+                else if ( is_pair )              ret.handrank =  HandRank::ONE_PAIR;
+                else                             ret.handrank = HandRank::HIGH_CARD;
+
+                // get list of unique cards
+                std::transform(cards.begin(), cards.end(), std::back_inserter(ret.maincards), [](const Card& a){ return a.get_rank(); });
+
+                ret.maincards.erase(std::unique(ret.maincards.begin(), ret.maincards.end()));
+
+                return ret;
                 
-                if ( is_straight_flush )    return HandRank::STRAIGHT_FLUSH;
-                if ( is_four_kind )         return HandRank::FOUR_KIND;
-                if ( is_full_house )        return HandRank::FULL_HOUSE;
-                if ( is_flush )             return HandRank::FLUSH;
-                if ( is_straight )          return HandRank::STRAIGHT;
-                if ( is_three_kind )        return HandRank::THREE_KIND;
-                if ( is_two_pair )          return HandRank::TWO_PAIR;
-                if ( is_pair )              return HandRank::ONE_PAIR;
-                return HandRank::HIGH_CARD;
             }
 
+        static Hand* showdown(const std::list<Hand*>& hands) {
+            if (hands.empty()) 
+                return nullptr;
+            // calculate full hand rank for each hand
+            std::for_each(hands.begin(), hands.end(), [](Hand* h) { h->rank = calcFullHandRank(h); });
 
-        static Hand* showdown(std::list<Hand*> hands) {
-            std::list<Hand*>::iterator it = hands.begin();
-            std::list<Hand*> topHands;
-            auto handWinner = it;
-            auto rankA = (*it)->get_hand_rank();
-            auto rankB = (*handWinner)->get_hand_rank();
-            while(it != hands.end()) {
-                rankA = (*it)->get_hand_rank();
-                if( rankA > rankB ) {
-                    handWinner = it;
-                    topHands.erase(topHands.begin(), topHands.end());
-                    topHands.push_front(*handWinner);
+            auto handComparator = [](const Hand* a, const Hand* b) -> bool {
+                // returns true if A is a weaker hand than B
+                FullHandRank fhrA = a->getFullHandRank();
+                FullHandRank fhrB = b->getFullHandRank();
+                if( fhrA.handrank < fhrB.handrank ) return true;
+                if( fhrA.handrank > fhrB.handrank ) return false;
+                // fix fix fi xfix 
+                if( fhrA.maincards.size() != fhrB.maincards.size() ) throw;
+                for(int i = 0; i < fhrA.maincards.size(); i++ ) {
+                    return fhrAmaincards[i] < fhrB.maincards[i];
                 }
-                else if( rankA == rankB ) topHands.push_front(*handWinner);
-                it++;
+            };
+            // determine best hand by HandRank (not card values)
+            auto handWinner = std::max_element(hands.begin(), hands.end(), handComparator);
+
+            // get all equivalent Hands
+            std::list<Hand*> topHands;
+            for(const auto& h : hands) {
+                const auto t = h;
+                const auto w = *handWinner;
+                if( handComparator(t,w) == handComparator(w,t) ) {
+                    topHands.emplace_back(t);
+                }
             }
-
-            if( topHands.size() == 1) {return topHands.front(); } // return if no kicker required
-
-
-            // sort cards
-            auto topit = topHands.begin();
-            while( topit != topHands.end() ) {
-                (*topit)->sort_cards();
-                topit++;
-            }
-            topit = topHands.begin();
-            auto winner = topit;            
-            auto winnerCardVal = (*winner)->get_high_card();
-
-            while( topit != topHands.end()) {
-                auto cardVal = (*topit)->get_high_card();
-                if( cardVal->get_rank() > winnerCardVal->get_rank() ) return *topit;
-                if( cardVal->get_rank() < winnerCardVal->get_rank() ) return *winner;
-                topit++;
-            }        
+            // if theres a clear winner, return
+            if( std::distance(topHands.begin(), topHands.end()) == 1) return topHands.front();
+            
+            // draw
             return nullptr;
         }
 
@@ -211,7 +221,20 @@ namespace Poker {
         return stream;
     }
 
-
+    /*
+    bool operator==(HandRank lhs, HandRank rhs) {
+        return static_cast<int>(lhs) == static_cast<int>(rhs);
+    }
+    bool operator<(HandRank lhs, HandRank rhs) {
+        return static_cast<int>(lhs) < static_cast<int>(rhs);
+    }
+    bool operator>(HandRank lhs, HandRank rhs) {
+        return static_cast<int>(lhs) > static_cast<int>(rhs);
+    }
+    bool operator!=(HandRank lhs, HandRank rhs) {
+        return static_cast<int>(lhs) != static_cast<int>(rhs);
+    }
+    */
 
 
 }

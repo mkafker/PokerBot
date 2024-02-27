@@ -68,7 +68,7 @@ namespace Poker {
         public:
             Card() : rank { Rank::UNDEF_RANK }, suit{ Suit::UNDEF_SUIT } {};
             Card(Rank rank, Suit suit) : rank{ rank }, suit{ suit } {};
-            Rank get_rank() { return rank; }
+            Rank get_rank() const { return rank; }
             Suit get_suit() const { return suit; }
             int get_rank_as_int() const { return static_cast<int>(rank);}
             char get_rank_as_char() const {return rank_to_char_map[rank]; }
@@ -79,6 +79,8 @@ namespace Poker {
     };
     inline bool operator<(Card a, Card b) { return a.get_rank_as_int() < b.get_rank_as_int(); }
     inline bool operator>(Card a, Card b) { return b<a; }
+    inline bool operator==(const Card a, const Card b) { return a.get_rank_as_int() == b.get_rank_as_int(); }
+    
     inline std::ostream& operator<<(std::ostream& stream, Card &a) { 
         stream << char(a.get_suit()) << a.get_rank_as_char();
         return stream;
