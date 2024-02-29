@@ -23,11 +23,20 @@ namespace Poker {
         FOUR_KIND = 8, 
         STRAIGHT_FLUSH = 9
     };
-    struct FullHandRank {                   // example: A A A K K 3 2
-        HandRank handrank;                  // full house
-        std::vector<Card> maincards;        // {A, K}
-        std::vector<Card> kickers;          // {3, 2}
+    struct FullHandRank {
+        // Holds full ranking information about a hand
+        HandRank handrank;                  
+        std::vector<Card> maincards;        
+        std::vector<Card> kickers;          
     };
+    static FullHandRank nullFHR;            // for erroneous FHRs
+    inline bool operator==(FullHandRank& a, FullHandRank& b) {
+        bool tmp = true;
+        if(a.handrank != b.handrank) tmp = false;
+        if(a.kickers != b.kickers) tmp = false;
+        if(a.maincards != b.maincards) tmp = false;
+        return tmp;
+    }
     static std::unordered_map<HandRank, std::string> HandRank_to_String {
         {HandRank::UNDEF_HANDRANK, "UNDEF_Hand"},
         {HandRank::HIGH_CARD, "High card"},
@@ -79,7 +88,7 @@ namespace Poker {
                 FullHandRank ret;
                 hand->sortCardsDescending();
 
-                const size_t num_cards = hand->numCards;
+                const size_t num_cards = hand->cards.size();
                 auto   cards     = hand->cards;
 
                 std::vector<Card>     winningCards;
@@ -220,58 +229,53 @@ namespace Poker {
                 return ret;
                 
             }
-        static bool showdown(const FullHandRank& A, const FullHandRank& B) {
-            if( A.handrank < B.handrank ) return true;
-            if( A.handrank > B.handrank ) return false;
+        static FullHandRank& showdownFHR(FullHandRank& A, FullHandRank& B) {
+            // Returns true if B beats A
+
+            if( A.handrank < B.handrank ) return B;
+            if( A.handrank > B.handrank ) return A;
 
             // handranks equal, check value of main cards
             for(size_t i=0; i<A.maincards.size(); i++) {
                 const Card a = A.maincards[i];
                 const Card b = B.maincards[i];
-                if( a.get_rank() < b.get_rank()) return true;
+                if( a.get_rank() < b.get_rank()) return B;
+                if( a.get_rank() > b.get_rank()) return A;
             }
+            // whoa! down to the kickers
             for(size_t i=0; i<A.kickers.size(); i++) {
                 const Card a = A.kickers[i];
                 const Card b = B.kickers[i];
-                if( a.get_rank() < b.get_rank()) return true;
+                if( a.get_rank() < b.get_rank()) return B;
+                if( a.get_rank() > b.get_rank()) return A;
             }
-            return false;
+            // draw
+            return nullFHR;
         }
-        static Hand* showdown(const std::list<Hand*>& hands) {
-            if (hands.empty()) 
+        static Hand* showdown(std::list<Hand*>::iterator hands_begin, std::list<Hand*>::iterator hands_end) {
+            if (std::distance(hands_begin, hands_end)==0) 
                 return nullptr;
+            
             // calculate full hand rank for each hand
-            std::for_each(hands.begin(), hands.end(), [](Hand* h) { h->rank = calcFullHandRank(h); });
+            std::list<FullHandRank> FHRs;
+            std::transform(hands_begin, hands_end, std::back_inserter(FHRs), [](Hand* h) {  return calcFullHandRank(h); });
+            
 
-            auto handComparator = [](const Hand* a, const Hand* b) -> bool {
-                // returns true if A is a weaker hand than B
-                FullHandRank fhrA = a->getFullHandRank();
-                FullHandRank fhrB = b->getFullHandRank();
-                if( fhrA.handrank < fhrB.handrank ) return true;
-                if( fhrA.handrank > fhrB.handrank ) return false;
-
-                if( fhrA.maincards.size() != fhrB.maincards.size() ) throw;
-                for(int i = 0; i < fhrA.maincards.size(); i++ ) {
-                    return fhrA.maincards[i] < fhrB.maincards[i];
-                }
-                for(int i = 0; i < fhrA.kickers.size(); i++ ) {
-                    return fhrA.kickers[i] < fhrB.kickers[i];
-                }
+            auto FHRComparator = [](FullHandRank& a, FullHandRank& b) -> bool {
+                return showdownFHR(a, b) == b;
             };
             // determine best hand by HandRank (not card values)
-            auto handWinner = std::max_element(hands.begin(), hands.end(), handComparator);
+            auto handWinner = std::max_element(FHRs.begin(), FHRs.end(), FHRComparator);
 
-            // get all equivalent Hands
-            std::list<Hand*> topHands;
-            for(const auto& h : hands) {
-                const auto t = h;
-                const auto w = *handWinner;
-                if( handComparator(t,w) == handComparator(w,t) ) {
-                    topHands.emplace_back(t);
-                }
+            if( handWinner != FHRs.end()) {
+                // get back original hand
+                size_t i = std::distance(FHRs.begin(), handWinner);
+                auto it = hands_begin;
+                // need random acces!!!!
+                for( int j=0;j<i;j++ )
+                    it++;
+                return *it; 
             }
-            // if theres a clear winner, return
-            if( std::distance(topHands.begin(), topHands.end()) == 1) return topHands.front();
             
             // draw
             return nullptr;
@@ -301,7 +305,7 @@ namespace Poker {
     
     
     
-
+    
 
     inline std::ostream& operator<<(std::ostream& stream, Hand &a) { 
         for( auto& c : a.cards) {

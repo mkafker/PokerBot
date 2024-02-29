@@ -26,6 +26,8 @@ namespace Poker {
                 table->pot          = 0;
             }
             void doRound() {
+                std::list<Player*> nonBankruptPlayers;
+
                 std::list<Player*> activePlayers         // holds players participating in betting (not folded or all-in)
                         = table->getPlayersInOrder();
                 std::unordered_map<Player*, PlayerMove> playerStatuses;                   // holds playing, all-in, or fold status
@@ -40,9 +42,9 @@ namespace Poker {
                 table->pot          = table->currentBet;
 
                 while( table->street < 4) {
-                    std::cout << "================================================" << std::endl;
+                    //std::cout << "================================================" << std::endl;
                     activePlayers = table->getPlayersInOrder(activePlayers, false);
-                    std::cout << "Phase " << table->street << " " << table->community_cards <<  std::endl;
+                    //std::cout << "Phase " << table->street << " " << table->community_cards <<  std::endl;
                     
                     table->dealCommunityCards();
                     
@@ -50,7 +52,7 @@ namespace Poker {
                     if( activePlayers.size() >= 2) {
                         bool keepgoing = true;                                                            // indicates we're ready for the next phase of the game
                         while(keepgoing) {
-                            std::cout << "---------------------------------------" << std::endl;
+                            //std::cout << "---------------------------------------" << std::endl;
                             keepgoing = false;
                             std::list<Player*>::iterator i = activePlayers.begin();
                             const int currentBetBeforeRound = table->currentBet;
@@ -65,7 +67,7 @@ namespace Poker {
                                     P->bankroll -= table->smallBlind;
                                 }
                                 PlayerMove Pmove = P->makeAIMove(table);
-                                P->printPlayerMove(Pmove);
+                                //P->printPlayerMove(Pmove);
 
                                 const bool allIn = (Pmove.bet_amount == P->bankroll);
                                 const bool allInOrRaise = Pmove.move == Move::MOVE_RAISE || allIn;
@@ -76,8 +78,8 @@ namespace Poker {
 
                                 // remove all-in or folded players from play
                                 if( allIn ) playerStatuses[P] = Pmove;
-                                std::cout << "Current bet: " << table->currentBet << std::endl;
-                                std::cout << "Current pot: " << table->pot << std::endl;
+                                //std::cout << "Current bet: " << table->currentBet << std::endl;
+                                //std::cout << "Current pot: " << table->pot << std::endl;
 
                                 
 
@@ -100,24 +102,27 @@ namespace Poker {
                 // add all-in players back to activePlayers
                 auto it = playerStatuses.begin();
                 while(it != playerStatuses.end()) {
-                    std::pair<Player*, PlayerMove> PPM(*it);
-                    if( PPM.second.move == Move::MOVE_ALLIN)
-                        std::transform(playerStatuses.begin(), playerStatuses.end(), std::back_inserter(activePlayers),
-                        [](const std::pair<Player*, PlayerMove>& pair) {
-                            return pair.first;
-                        });
+                    const Move playerMove = (*it).second.move;
+                    Player* player = (*it).first;
+                    if( playerMove == Move::MOVE_ALLIN) {
+                        activePlayers.emplace_back(player);
+                    }
                     it++;
                 }
 
-                winningPlayer = determineWinner(activePlayers);
+                winningPlayer = determineWinner(activePlayers.begin(), activePlayers.end());
                 if( winningPlayer ) {
                     // finally, reward player
                     winningPlayer->bankroll += table->pot;
-                    std::cout << "Guess who won! Player " << winningPlayer->playerID << std::endl;
+                    const int pID = winningPlayer->playerID;
+                    FullHandRank fhr = Hand::calcFullHandRank(&winningPlayer->hand);
+                    //std::cout << "Guess who won! Player " << winningPlayer->playerID 
+                    //<< " with a " << 
+                    //fhr.handrank << " " << fhr.maincards << "| " << fhr.kickers << std::endl;
 
                 }
                 else {
-                    std::cout << "Draw, returning bets!" << std::endl;
+                    //std::cout << "Draw, returning bets!" << std::endl;
                     // else, draw
                     for( Player* P : activePlayers ) 
                         P->bankroll += playerStatuses[P].bet_amount;
@@ -127,26 +132,30 @@ namespace Poker {
             }
 
             
-            Player* determineWinner(std::list<Player*> players) {
-                Player* winningPlayer;
-                if ( players.size() == 1) {
-                        return players.front();
-                    }
-                else if ( players.size() >= 2) {
+            Player* determineWinner(std::list<Player*>::iterator players_begin, std::list<Player*>::iterator players_end) {
+                size_t numPlayers = std::distance(players_begin, players_end);
+                if ( numPlayers == 0) { return nullptr; }
+                else if ( numPlayers == 1) {
+                        return *players_begin;
+                }
+                else if ( numPlayers >= 2) {
                     // showdown
                     // Form hands from community cards and player cards
-                    auto it = players.begin();
+                    auto it = players_begin;
                     std::unordered_map<Hand*, Player*> playerHandMap;
                     std::list<Hand*> handList;
-                    while( it != players.end()) {
-                        Player* P = *it;
-                        Hand* Phand = &(P->hand);
-                        handList.push_back(Phand);
-                        Phand->append(table->community_cards);
-                        playerHandMap[Phand] = P;
-                        it++;
-                    }
-                    Hand* winningHand = Hand::showdown(handList);
+                    std::for_each(players_begin, players_end, [&playerHandMap, &handList](Player* p) {
+                        Hand* h = &p->hand;
+                        playerHandMap[h] = p;
+                        handList.emplace_back(h);
+                    });
+
+                    std::for_each(handList.begin(), handList.end(), [this](Hand* h) {
+                        h->append(table->community_cards);
+                    });
+                    
+                    Hand* winningHand = Hand::showdown(handList.begin(), handList.end());
+
                     return playerHandMap[winningHand];
                 }
                 else {
@@ -154,45 +163,7 @@ namespace Poker {
                 }
             }
             auto get_table() { return table; }
-            bool sanityCheckMove(Player& P, PlayerMove& move) {
-                // sanity checks player moves, and corrects them if it can
-                // Player move takes precedence over bet amount
-                const bool isBB = P.getPosition() == PlayerPosition::POS_BB;
-                const bool isSB = P.getPosition() == PlayerPosition::POS_BB;
-                const bool didCall = move.move == Move::MOVE_CALL;
-                const bool didRaise = move.move == Move::MOVE_RAISE;
-                const bool didFold  = move.move == Move::MOVE_FOLD;
-                const bool allIn    = move.move == Move::MOVE_ALLIN;
-                const bool nobodyRaisedYet = table->currentBet == table->get_BB();
-
-                if(isBB && nobodyRaisedYet && (move.bet_amount != table->get_BB())) {
-                    move.bet_amount = table->get_BB();
-                    return false;
-                }
-                if(isSB && nobodyRaisedYet && (move.bet_amount != table->get_SB())) {
-                    move.bet_amount = table->get_SB();
-                    return false;
-                }
-                if(didCall && (move.bet_amount != table->currentBet)) {
-                    move.bet_amount = table->currentBet;
-                    return false;
-                }
-                if(didRaise && (move.bet_amount < 2*table->currentBet)) {
-                    move.bet_amount = table->currentBet;
-                    return false;
-                }
-                if( table->currentBet >= P.bankroll ) {
-                    move.bet_amount = P.bankroll;
-                    move.move = Move::MOVE_ALLIN;
-                    return false;
-                }
-                if( move.bet_amount < 0 ) {
-                    move.bet_amount = 0;
-                    move.move = Move::MOVE_FOLD;
-                    return false;
-                }
-                return true;
-            }
+            
             void rotatePlayers() {
                 for(auto &P : table->player_list) {
                     P.incPosition();

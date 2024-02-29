@@ -17,7 +17,7 @@ using namespace Poker;
 
 
 void benchmarkHandRankCalculator() {
-std::random_device rd;
+    std::random_device rd;
     std::mt19937_64 g(rd());
     uint64_t N = 1000000;
     auto start = std::chrono::steady_clock::now();
@@ -41,9 +41,9 @@ std::random_device rd;
         */
         if( iN == 0 ) lastHand = FHR;
         else {
-            if( Hand::showdown(lastHand, FHR) )    { 
-                lastHand = FHR;
-            }
+            //if( (Hand::showdownFHR(lastHand, FHR) == FHR )    { 
+            //    lastHand = FHR;
+            //}
         }   
     }
 
@@ -51,6 +51,22 @@ std::random_device rd;
     std::cout << "Best hand: " << std::endl;
     std::cout << lastHand.handrank << " " << lastHand.maincards << "| " << lastHand.kickers << std::endl;
     std::cout << N << " hands calculated in " << duration.count() << " seconds, or " << double(N)/duration.count() << " hands/second" << std::endl;
+}
+
+void benchmarkRounds() {
+
+    
+    uint64_t N = 1000000;
+    auto start = std::chrono::steady_clock::now();
+    FullHandRank lastHand;
+    int iT = 0;
+    for(int iN = 0; iN < N; iN++) {
+        auto game = std::make_shared<Game>();
+        game->doRound();
+    }
+
+    std::chrono::duration<double> duration = std::chrono::steady_clock::now() - start;
+    std::cout << N << " rounds calculated in " << duration.count() << " seconds, or " << double(N)/duration.count() << " rounds/second" << std::endl;
 }
 
 int main() {
@@ -80,18 +96,10 @@ int main() {
     //fun = Hand::calcFullHandRank(&fourkind);
     //std::cout << fun.handrank << " " << fun.maincards << "| " << fun.kickers << std::endl;
 
-    benchmarkHandRankCalculator();
 
 
-    /*
-    std::cout << "Begin game" << std::endl;
-    auto game = std::make_shared<Game>();
-    std::cout << *game->table->get_deck() << std::endl;
-
-    for(int it = 0; it < 1; it++) {
-        game->doRound();
-        game->print();
-    }*/
+    benchmarkRounds();
+    
 
     return 0;
 }

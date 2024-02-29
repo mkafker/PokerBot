@@ -33,6 +33,7 @@ namespace Poker {
             Player& get_player_by_position(PlayerPosition p);
             
             std::list<Player*> getPlayersInOrder(std::list<Player*> plist = std::list<Player*>(), bool startOfRound = true);
+            std::list<Player*> getNonBankruptPlayers(std::list<Player*> plist = std::list<Player*>());
 
 
             void set_num_players(int n);

@@ -26,11 +26,11 @@ namespace Poker {
                 deck->shuffle(g);
             }
             void Table::dealCommunityCards() {
-                if( street == 0 ) {
+                if( street == 1 ) {
                     for(int i = 0; i < 3; i++ ) 
                         community_cards.push_back(deck->pop_card());
                 }
-                else { community_cards.push_back(deck->pop_card()); }
+                else if (street > 1) { community_cards.push_back(deck->pop_card()); }
             }
             void Table::dealAllPlayersCards() {
                 // Deals everyone two cards
@@ -65,6 +65,16 @@ namespace Poker {
                     return ret;
                 }
                 return std::list<Player*>();
+            }
+
+            std::list<Player*> Table::getNonBankruptPlayers(std::list<Player*> plist) {
+                std::list<Player*> nbp;
+                auto isBR = [] (Player* a) -> bool { return a->bankroll <= 0; };
+                if( plist.empty() ) {
+                    std::transform(player_list.begin(), player_list.end(), std::back_inserter(plist), [] (Player& a) {return &a; });
+                }
+                std::remove_copy_if(plist.begin(), plist.end(), std::back_inserter(nbp), isBR);
+                return nbp;
             }
 
 
