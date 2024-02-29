@@ -11,6 +11,7 @@ namespace Poker {
     class Table {
         private:
             std::shared_ptr<Deck> deck;
+            std::mt19937_64 g;
         public:
             std::list<Player> player_list;
             int              n_players;

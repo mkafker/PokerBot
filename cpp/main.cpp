@@ -5,6 +5,8 @@
 #include <iostream>
 #include <vector>
 #include <memory>
+#include <chrono>
+#include <random>
 
 #include "card.h"
 #include "showdown.h"
@@ -14,30 +16,82 @@
 using namespace Poker;
 
 
+void benchmarkHandRankCalculator() {
+std::random_device rd;
+    std::mt19937_64 g(rd());
+    uint64_t N = 1000000;
+    auto start = std::chrono::steady_clock::now();
+    FullHandRank lastHand;
+    int iT = 0;
+    for(int iN = 0; iN < N; iN++) {
+        iT++;
+        Deck newdeck;
+        newdeck.shuffle(g);
+        std::vector<Card> cards(7);
+        for(short j=0; j<7; j++)
+            cards[j]=newdeck.pop_card();
+        Hand hand (cards);
+        FullHandRank FHR = Hand::calcFullHandRank(&hand);
+        /*
+        if( iT == 1000) {
+            iT = 0;
+                std::cout << FHR.handrank << " " << FHR.maincards << "| " << FHR.kickers << std::endl;
+
+        }
+        */
+        if( iN == 0 ) lastHand = FHR;
+        else {
+            if( Hand::showdown(lastHand, FHR) )    { 
+                lastHand = FHR;
+            }
+        }   
+    }
+
+    std::chrono::duration<double> duration = std::chrono::steady_clock::now() - start;
+    std::cout << "Best hand: " << std::endl;
+    std::cout << lastHand.handrank << " " << lastHand.maincards << "| " << lastHand.kickers << std::endl;
+    std::cout << N << " hands calculated in " << duration.count() << " seconds, or " << double(N)/duration.count() << " hands/second" << std::endl;
+}
+
 int main() {
-    Hand hand1(std::vector<Card>({  Card(Rank::C_2, Suit::CLUB), 
-                                    Card(Rank::C_2, Suit::DIAMOND),
-                                    Card(Rank::C_K, Suit::HEART) }));
-    Hand hand2(std::vector<Card>({  Card(Rank::C_7, Suit::CLUB), 
-                                    Card(Rank::C_7, Suit::DIAMOND),
-                                    Card(Rank::C_Q, Suit::HEART) }));
-    std::list<Hand*> s({&hand1, &hand2});
-    // TODO: I think..... make HandRank a struct that contains info about both Rank (e.g. full house) and unique card value information 
-    //  e.g. full house A A A K K 3 2
-    // should be represented as {full house, {ace, king, 3, 2}}
-    // implement comparator overloads to make life easy
-    auto* res = Hand::showdown(s);
-    if( res == &hand1) std::cout << "hand1 wins" << std::endl;
-    if( res == &hand2) std::cout << "hand2 wins" << std::endl;
+    Hand straightflush(std::vector<Card>({  Card(Rank::C_A, Suit::DIAMOND     ), 
+                                    Card(Rank::C_K, Suit::HEART  ),
+                                    Card(Rank::C_Q, Suit::HEART    ),
+                                    Card(Rank::C_J, Suit::HEART    ),
+                                    Card(Rank::C_T, Suit::HEART    ),
+                                    Card(Rank::C_3, Suit::DIAMOND    ),
+                                    Card(Rank::C_6, Suit::CLUB    )
+                                    
+                                    }));
+    Hand fourkind(std::vector<Card>({  Card(Rank::C_2, Suit::HEART     ), 
+                                    Card(Rank::C_2, Suit::HEART  ),
+                                    Card(Rank::C_2, Suit::DIAMOND    ),
+                                    Card(Rank::C_2, Suit::CLUB    ),
+                                    Card(Rank::C_T, Suit::HEART    ),
+                                    Card(Rank::C_9, Suit::HEART    ),
+                                    Card(Rank::C_6, Suit::CLUB    )
+                                    
+                                    }));
+
+    //FullHandRank fun = Hand::calcFullHandRank(&straightflush);
+    //std::cout << fun.handrank << " " << fun.maincards << "| " << fun.kickers << std::endl;
+    
+
+    //fun = Hand::calcFullHandRank(&fourkind);
+    //std::cout << fun.handrank << " " << fun.maincards << "| " << fun.kickers << std::endl;
+
+    benchmarkHandRankCalculator();
+
+
     /*
     std::cout << "Begin game" << std::endl;
     auto game = std::make_shared<Game>();
     std::cout << *game->table->get_deck() << std::endl;
 
-    //for(Player& p : game->table->player_list) { std::cout << p.position << " " << p.bankroll << std::endl;}
     for(int it = 0; it < 1; it++) {
         game->doRound();
         game->print();
     }*/
+
     return 0;
 }

@@ -140,7 +140,7 @@ namespace Poker {
                     std::list<Hand*> handList;
                     while( it != players.end()) {
                         Player* P = *it;
-                        const auto Phand = &P->hand;
+                        Hand* Phand = &(P->hand);
                         handList.push_back(Phand);
                         Phand->append(table->community_cards);
                         playerHandMap[Phand] = P;

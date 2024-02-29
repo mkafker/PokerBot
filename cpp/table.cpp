@@ -10,6 +10,9 @@ namespace Poker {
             const int               Table::get_SB() { return smallBlind; }
 
             void Table::init(int n) {
+                std::random_device rd;
+                std::mt19937_64 g(rd());
+
                 n_players = n;
                 for(int i = 0; i < n_players; i++ ) {
                     Player p(i); // generate new players
@@ -20,7 +23,7 @@ namespace Poker {
                 currentBet = 0;
                 pot = 0;
                 deck = std::make_shared<Deck>();
-                deck->shuffle();
+                deck->shuffle(g);
             }
             void Table::dealCommunityCards() {
                 if( street == 0 ) {

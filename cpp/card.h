@@ -79,8 +79,8 @@ namespace Poker {
     };
     inline bool operator<(Card a, Card b) { return a.get_rank_as_int() < b.get_rank_as_int(); }
     inline bool operator>(Card a, Card b) { return b<a; }
-    inline bool operator==(const Card a, const Card b) { return a.get_rank_as_int() == b.get_rank_as_int(); }
-    
+    inline bool operator==(const Card a, const Card b) { return (a.get_rank_as_int() == b.get_rank_as_int()) && (a.get_suit() == b.get_suit()); }
+
     inline std::ostream& operator<<(std::ostream& stream, Card &a) { 
         stream << char(a.get_suit()) << a.get_rank_as_char();
         return stream;
@@ -101,9 +101,8 @@ namespace Poker {
                 }
                 index = 51;
             }
-            void shuffle() {
-                std::random_device rd;
-                std::mt19937 g(rd());
+            void shuffle(std::mt19937_64 &g) {
+                
                 std::shuffle(cards.begin(), cards.end(), g);
             }
             auto pop_card() {
