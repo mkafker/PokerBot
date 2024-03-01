@@ -14,7 +14,6 @@ namespace Poker {
             std::mt19937_64 g;
         public:
             std::list<Player> player_list;
-            int              n_players;
             
             std::vector<Card> community_cards;
             int                 street              = 0;                // phase of the game. 0 = preflop, 1 = flop, 2 = turn, 3 = river
@@ -35,7 +34,7 @@ namespace Poker {
             std::list<Player*> getPlayersInOrder(std::list<Player*> plist = std::list<Player*>(), bool startOfRound = true);
             std::list<Player*> getNonBankruptPlayers(std::list<Player*> plist = std::list<Player*>());
 
-
+            
             void set_num_players(int n);
             void kick_player(int i);
             void rotatePlayers();

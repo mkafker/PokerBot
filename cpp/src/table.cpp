@@ -12,12 +12,6 @@ namespace Poker {
             void Table::init(int n) {
                 std::random_device rd;
                 std::mt19937_64 g(rd());
-
-                n_players = n;
-                for(int i = 0; i < n_players; i++ ) {
-                    Player p(i); // generate new players
-                    player_list.push_back(p);
-                }
                 
                 street = 0;
                 currentBet = 0;
@@ -77,10 +71,6 @@ namespace Poker {
                 return nbp;
             }
 
-
-            void Table::set_num_players(int n) {
-                n_players = n;                  // effectively trims the last n_players - n players from the game
-            }
 
             void Table::resetPlayerHands() {
                 // clears all player hands

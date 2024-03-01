@@ -2,15 +2,11 @@
 #include <random>
 
 namespace Poker{
-
-    Player::Player() { position = PlayerPosition::POS_UTG; };
+    Player::Player() {};
     Player::Player(PlayerPosition p) : position { p } {};
-    Player::Player(int p)  { playerID = p; position = static_cast<PlayerPosition>(p); };
+    Player::Player(int p)  { playerID = p; };
     Player::Player(Hand h) : hand { h } {};
 
-    PlayerPosition Player::getPosition() const {
-        return position;
-    }
     PlayerMove Player::makeAIMove(std::shared_ptr<Table> info) {
         // Performs a random valid move
         auto clamp = [](int a, int b, int c) -> int { if(a<b) a=b; if(a>c) a=c; return a;};
@@ -42,7 +38,7 @@ namespace Poker{
     }
 
     void Player::incPosition() {
-        this->position = static_cast<PlayerPosition>(static_cast<int>(this->position) + 1);
+        this->position = static_cast<PlayerPosition>(static_cast<int>(this->position) + 1 % 6 ) ;
     }
 
     void Player::printPlayerMove(PlayerMove pmove) {
@@ -62,5 +58,6 @@ namespace Poker{
     void Player::resetHand() {
         this->hand.clear();
     }
+    inline bool Player::isBankrupt() { return this->bankroll <= 0; }
     
 }

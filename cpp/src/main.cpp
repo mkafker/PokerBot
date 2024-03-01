@@ -41,9 +41,9 @@ void benchmarkHandRankCalculator() {
         */
         if( iN == 0 ) lastHand = FHR;
         else {
-            //if( (Hand::showdownFHR(lastHand, FHR) == FHR )    { 
-            //    lastHand = FHR;
-            //}
+            if( Hand::showdownFHR(lastHand, FHR) == FHR  )    { 
+                lastHand = FHR;
+            }
         }   
     }
 
@@ -54,19 +54,43 @@ void benchmarkHandRankCalculator() {
 }
 
 void benchmarkRounds() {
+    uint64_t N = 1000;
+    auto start = std::chrono::steady_clock::now();
+    auto game1 = std::make_shared<Game>();
+    std::unique_ptr<Player> bestPlayer = game1->doRound();
+    int iT = 0;
+    for(int iN = 0; iN < N; iN++) {
+        auto game = std::make_shared<Game>();
+        std::unique_ptr<Player> winningPlayer = game->doRound();
+
+        auto winFHR = winningPlayer->FHR;
+        auto bestFHR = bestPlayer->FHR;
+        if( Hand::showdownFHR(bestFHR, winFHR) == winFHR )  { 
+            bestPlayer = std::move(winningPlayer);
+        }
+            
+    }
+
+    std::chrono::duration<double> duration = std::chrono::steady_clock::now() - start;
+    std::cout << "Best hand: " << std::endl;
+    std::cout << "Player " << bestPlayer->playerID  << " " << PlayerPosition_to_String[bestPlayer->getPosition()] 
+              << " " << bestPlayer->FHR.handrank << " " << bestPlayer->FHR.maincards << "| " << bestPlayer->FHR.kickers << std::endl;
+    std::cout << N << " rounds calculated in " << duration.count() << " seconds, or " << double(N)/duration.count() << " rounds/second" << std::endl;
+}
+void benchmarkGames() {
 
     
-    uint64_t N = 1000000;
+    uint64_t N = 1000;
     auto start = std::chrono::steady_clock::now();
     FullHandRank lastHand;
     int iT = 0;
     for(int iN = 0; iN < N; iN++) {
         auto game = std::make_shared<Game>();
-        game->doRound();
+         game->doGame();
     }
 
     std::chrono::duration<double> duration = std::chrono::steady_clock::now() - start;
-    std::cout << N << " rounds calculated in " << duration.count() << " seconds, or " << double(N)/duration.count() << " rounds/second" << std::endl;
+    std::cout << N << " games calculated in " << duration.count() << " seconds, or " << double(N)/duration.count() << " games/second" << std::endl;
 }
 
 int main() {
@@ -97,9 +121,9 @@ int main() {
     //std::cout << fun.handrank << " " << fun.maincards << "| " << fun.kickers << std::endl;
 
 
-
+    //Game mygame;
+    //mygame.doGame();
     benchmarkRounds();
-    
 
     return 0;
 }

@@ -13,23 +13,41 @@ namespace Poker {
     class Game {
         public:
             std::shared_ptr<Table>      table;                              // The public members of Table are what are visible to all and will serve as input to the AI
+            int                         numPlayers;                         // Need a new game to change number of players
 
             Game () {
-                init();
+                reset();
             }
-            void init() {
+            void reset(int n = 6) {
+                numPlayers = n;
                 table = std::make_shared<Table>();                          // make table (and deck)
-                for(Player& p : table->player_list) p.bankroll = 100;       // give everybody a benjamin
+                std::vector<PlayerPosition> playerPositionList = numPlayersToPositionList(numPlayers);
+                for(int i = 0; i < numPlayers; i++ ) {
+                    Player p;
+                    p.setPosition(playerPositionList[i]);
+                    p.bankroll = 100;
+                    table->player_list.push_back(p);
+                }
                 table->bigBlind     = 10;
                 table->smallBlind   = 5;
                 table->street       = 0;
                 table->pot          = 0;
             }
-            void doRound() {
-                std::list<Player*> nonBankruptPlayers;
 
-                std::list<Player*> activePlayers         // holds players participating in betting (not folded or all-in)
-                        = table->getPlayersInOrder();
+            void doGame() {
+                std::list<Player*> players = table->getPlayersInOrder();
+                std::list<Player*> nonBankruptPlayers = table->getNonBankruptPlayers();
+                while( nonBankruptPlayers.size() > 1 ) {
+                    nonBankruptPlayers = table->getNonBankruptPlayers(nonBankruptPlayers);
+                    doRound(nonBankruptPlayers);
+                }
+                Player* winner = nonBankruptPlayers.front();
+            }
+
+            std::unique_ptr<Player> doRound(std::list<Player*> activePlayers = std::list<Player*>()) {
+                if( activePlayers.size() == 1 ) return nullptr;
+                activePlayers = table->getPlayersInOrder(activePlayers);
+
                 std::unordered_map<Player*, PlayerMove> playerStatuses;                   // holds playing, all-in, or fold status
                 Player* winningPlayer;
                 table->resetPlayerHands();
@@ -116,6 +134,8 @@ namespace Poker {
                     winningPlayer->bankroll += table->pot;
                     const int pID = winningPlayer->playerID;
                     FullHandRank fhr = Hand::calcFullHandRank(&winningPlayer->hand);
+                    winningPlayer->FHR = fhr;
+                    return std::make_unique<Player>(*winningPlayer);
                     //std::cout << "Guess who won! Player " << winningPlayer->playerID 
                     //<< " with a " << 
                     //fhr.handrank << " " << fhr.maincards << "| " << fhr.kickers << std::endl;
@@ -126,9 +146,8 @@ namespace Poker {
                     // else, draw
                     for( Player* P : activePlayers ) 
                         P->bankroll += playerStatuses[P].bet_amount;
+                    return std::make_unique<Player>();
                 }
-                
-                rotatePlayers();
             }
 
             
@@ -162,8 +181,9 @@ namespace Poker {
                     return nullptr;
                 }
             }
-            auto get_table() { return table; }
             
+            
+
             void rotatePlayers() {
                 for(auto &P : table->player_list) {
                     P.incPosition();
