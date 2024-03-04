@@ -64,7 +64,7 @@ def main():
     Run iterations of counterfactual regret minimization algorithm.
     """
     i_map = {}  # map of information sets
-    n_iterations = 100
+    n_iterations = 1
     expected_game_value = 0
 
     for i in range(n_iterations):
@@ -76,7 +76,7 @@ def main():
 
     expected_game_value /= n_iterations
 
-    #quit()
+    quit()
     print()
     info_set = get_info_set(i_map, "P2;3;;aa/crR")
     print(info_set)
@@ -212,6 +212,10 @@ def cfr(i_map, infoset_key=";;;", opponent_card=-1, pr_1=1, pr_2=1, pr_c=1):
         info_set.regret_sum += pr_2 * pr_c * regrets
     else:
         info_set.regret_sum += pr_1 * pr_c * regrets
+
+    if infoset_key == 'P1;2;;aa/cr':
+        print(infoset_key, action_utils, opponent_card)
+        print(info_set.regret_sum)
 
     return util
 
