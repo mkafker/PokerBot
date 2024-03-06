@@ -55,7 +55,6 @@ namespace Poker{
             else if( n == 4 )       ret.emplace_back(PlayerPosition::POS_UTG);
             else if( n == 3 )       ret.emplace_back(PlayerPosition::POS_SB);            
         }
-
         return ret;
     };
 
@@ -64,25 +63,28 @@ namespace Poker{
         public:
             int  bankroll;
             int  playerID;                    // 
-            Hand hand;           // the two-card hand
             PlayerPosition  position;                      // seat the player is on. 0 = UTG, 1 = MP, 2 = CO, 3 = BTN, 4 = SB, 5 = BB 
             PlayerMove  move;
             FullHandRank FHR;
+            bool isActive;
+            std::vector<Card> hand;
             
+            Player();
             Player(int p);
             Player(PlayerPosition p);
-            Player(Hand h);
-            Player();
+            Player(int p, int playerID);
 
-            PlayerPosition getPosition() const { return this->position; };
-            void setPosition(int& pos) { this->position = static_cast<PlayerPosition>(pos); }
-            void setPosition(PlayerPosition &p) { this->position = p; }
+            const PlayerPosition& getPosition() const { return this->position; };
+            void setPosition(const int& pos) { this->position = static_cast<PlayerPosition>(pos); }
+            void setPosition(const PlayerPosition &p) { this->position = p; }
             void incPosition();
             PlayerMove makeAIMove(std::shared_ptr<Table> info);
-            void printPlayerMove(PlayerMove move);
             void resetHand();
             inline bool isBankrupt();
     };
+
+    void printPlayerMove(const Player& player, const PlayerMove& move);
+
 
     inline std::ostream& operator<<(std::ostream& stream, PlayerPosition &a) { 
         stream << PlayerPosition_to_String[a];

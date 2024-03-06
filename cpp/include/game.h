@@ -19,9 +19,10 @@ namespace Poker {
             }
             void reset(int n = 6) {
                 table = std::make_shared<Table>();
-                table->getDeck().shuffle();
+                table->reset(n);
+                table->shuffleDeck();
                 std::vector<PlayerPosition> playerPositionList = numPlayersToPositionList(n);
-                for(int i = 0; i < numPlayers; i++ ) {
+                for(int i = 0; i < n; i++ ) {
                     Player p;
                     p.setPosition(playerPositionList[i]);
                     p.bankroll = 100;
@@ -35,8 +36,8 @@ namespace Poker {
 
             void doGame() {
                 // Call reset() before this function
-                std::list<Player*> players = table->getPlayersInOrder();
-                std::list<Player*> nonBankruptPlayers = table->getNonBankruptPlayers();
+                std::vector<Player*> players = table->getPlayersInOrder();
+                std::vector<Player*> nonBankruptPlayers = table->getNonBankruptPlayers();
                 while( nonBankruptPlayers.size() > 1 ) {
                     nonBankruptPlayers = table->getNonBankruptPlayers(nonBankruptPlayers);
                     doRound();
@@ -49,9 +50,14 @@ namespace Poker {
                 //
                 // first, get a list of pointers to active players
                 // Active players are those that are not bankrupt
-                std::list<Player*> activePlayers = table->getActivePlayers();
+                std::vector<Player*> activePlayers; 
+                std::vector<Player> playerlist = table->player_list; // get list of Players to be converted in a list of pointers
+                //std::transform(playerlist.begin(), playerlist.end(), std::back_inserter(activePlayers), [] (const Player& a) {return &a; } );
+                std::for_each(playerlist.begin(), playerlist.end(), [&]( Player& p) { activePlayers.emplace_back(&p);});
+
+                activePlayers = table->getActivePlayers(activePlayers);
                 activePlayers = table->getPlayersInOrder(activePlayers);
-                if( activePlayers.size() == 1 ) return std::make_shared<Player>(*activePlayers.first());
+                if( activePlayers.size() == 1 ) return std::make_shared<Player>(*activePlayers.front());
 
                 std::unordered_map<Player*, PlayerMove> playerStatuses;                   // holds all-in or fold status
                 std::shared_ptr<Player> winningPlayer;
@@ -66,7 +72,7 @@ namespace Poker {
 
                 while( table->street < 4) {
                     //std::cout << "================================================" << std::endl;
-                    activePlayers = table->getPlayersInOrder(activePlayers, false);
+                    activePlayers = table->getPlayersInOrder(activePlayers);
                     //std::cout << "Phase " << table->street << " " << table->community_cards <<  std::endl;
                     
                     table->dealCommunityCards();
@@ -77,7 +83,7 @@ namespace Poker {
                         while(keepgoing) {
                             //std::cout << "---------------------------------------" << std::endl;
                             keepgoing = false;
-                            std::list<Player*>::iterator i = activePlayers.begin();
+                            auto i = activePlayers.begin();
                             const int minimumBetBeforeRound = table->minimumBet;
                             while (i != activePlayers.end()) {
                                 Player* P = *i;
@@ -133,14 +139,14 @@ namespace Poker {
                     it++;
                 }
 
-                winningPlayer = determineWinner(activePlayers.begin(), activePlayers.end());
+                winningPlayer = std::make_shared<Player>(*determineWinner(activePlayers.begin(), activePlayers.end()));
                 if( winningPlayer ) {
                     // finally, reward player
                     winningPlayer->bankroll += table->pot;
                     const int pID = winningPlayer->playerID;
-                    FullHandRank fhr = Hand::calcFullHandRank(&winningPlayer->hand);
+                    FullHandRank fhr = calcFullHandRank(winningPlayer->hand);
                     winningPlayer->FHR = fhr;
-                    return std::make_unique<Player>(*winningPlayer);
+                    return winningPlayer;
                     //std::cout << "Guess who won! Player " << winningPlayer->playerID 
                     //<< " with a " << 
                     //fhr.handrank << " " << fhr.maincards << "| " << fhr.kickers << std::endl;
@@ -151,12 +157,13 @@ namespace Poker {
                     // else, draw
                     for( Player* P : activePlayers ) 
                         P->bankroll += playerStatuses[P].bet_amount;
-                    return std::make_unique<Player>();
+                    return std::make_shared<Player>();
                 }
             }
 
             
-            Player* determineWinner(std::list<Player*>::iterator players_begin, std::list<Player*>::iterator players_end) {
+            Player* determineWinner(std::vector<Player*>::iterator players_begin, std::vector<Player*>::iterator players_end) {
+                // From a vector of pointers to player, returns a pointer to the winner
                 size_t numPlayers = std::distance(players_begin, players_end);
                 if ( numPlayers == 0) { return nullptr; }
                 else if ( numPlayers == 1) {
@@ -166,19 +173,20 @@ namespace Poker {
                     // showdown
                     // Form hands from community cards and player cards
                     auto it = players_begin;
-                    std::unordered_map<Hand*, Player*> playerHandMap;
-                    std::list<Hand*> handList;
+                    std::unordered_map<std::vector<Card>*, Player*> playerHandMap;
+                    std::vector<std::vector<Card>*> handList(numPlayers);
                     std::for_each(players_begin, players_end, [&playerHandMap, &handList](Player* p) {
-                        Hand* h = &p->hand;
-                        playerHandMap[h] = p;
-                        handList.emplace_back(h);
+                        std::vector<Card> h = p->hand;  // make a copy of the players hand
+                        playerHandMap.emplace(&h, p);
+                        handList.emplace_back(&h);
                     });
 
-                    std::for_each(handList.begin(), handList.end(), [this](Hand* h) {
-                        h->append(table->community_cards);
+                    std::for_each(handList.begin(), handList.end(), [this](std::vector<Card>* h) {
+                        auto commCards = table->community_cards;
+                        h->insert(h->end(), commCards.begin(), commCards.end() );       // append community cards to the end of the (copied) players hand
                     });
                     
-                    Hand* winningHand = Hand::showdown(handList.begin(), handList.end());
+                    std::vector<Card>* winningHand = showdown(handList.begin(), handList.end());
 
                     return playerHandMap[winningHand];
                 }

@@ -19,8 +19,7 @@ namespace Poker {
           std::vector<Card> cards(7);
           for(short j=0; j<7; j++)
               cards[j]=newdeck.pop_card();
-          Hand hand (cards);
-          FullHandRank FHR = Hand::calcFullHandRank(&hand);
+          FullHandRank FHR = calcFullHandRank(cards);
           /*
           if( iT == 1000) {
               iT = 0;
@@ -30,7 +29,7 @@ namespace Poker {
           */
           if( iN == 0 ) lastHand = FHR;
           else {
-              if( Hand::showdownFHR(lastHand, FHR) == FHR  )    { 
+              if( showdownFHR(lastHand, FHR) == FHR  )    { 
                   lastHand = FHR;
               }
           }   
@@ -45,15 +44,15 @@ namespace Poker {
       uint64_t N = 1000;
       auto start = std::chrono::steady_clock::now();
       auto game1 = std::make_shared<Game>();
-      std::unique_ptr<Player> bestPlayer = game1->doRound();
+      std::shared_ptr<Player> bestPlayer = game1->doRound();
       int iT = 0;
       for(int iN = 0; iN < N; iN++) {
           auto game = std::make_shared<Game>();
-          std::unique_ptr<Player> winningPlayer = game->doRound();
+          std::shared_ptr<Player> winningPlayer = game->doRound();
 
           auto winFHR = winningPlayer->FHR;
           auto bestFHR = bestPlayer->FHR;
-          if( Hand::showdownFHR(bestFHR, winFHR) == winFHR )  {
+          if( showdownFHR(bestFHR, winFHR) == winFHR )  {
               bestPlayer = std::move(winningPlayer);
           }
       }
@@ -112,11 +111,9 @@ namespace Poker {
         cardsAMutable.insert(cardsAMutable.end(), communityCards.begin(), communityCards.end());
         cardsBMutable.insert(cardsBMutable.end(), communityCards.begin(), communityCards.end());
 
-        Hand handA (cardsAMutable);
-        Hand handB (cardsBMutable);
-        const FullHandRank fhrA = Hand::calcFullHandRank(&handA);
-        const FullHandRank fhrB = Hand::calcFullHandRank(&handB);
-        auto showdownResult = Hand::showdownFHR(fhrA, fhrB);
+        const FullHandRank fhrA = calcFullHandRank(cardsAMutable);
+        const FullHandRank fhrB = calcFullHandRank(cardsBMutable);
+        auto showdownResult = showdownFHR(fhrA, fhrB);
         
         if(showdownResult == fhrA) winCountA++;
         else if(showdownResult == fhrB) winCountB++;

@@ -66,15 +66,14 @@ namespace Poker {
     };
     class Card {
         public:
-            Card() : rank { Rank::UNDEF_RANK }, suit{ Suit::UNDEF_SUIT } {};
-            Card(Rank rank, Suit suit) : rank{ rank }, suit{ suit } {};
-            Rank get_rank() const { return rank; }
-            Suit get_suit() const { return suit; }
-            int get_rank_as_int() const { return static_cast<int>(rank);}
-            char get_rank_as_char() const {return rank_to_char_map[rank]; }
-        private:
             Rank rank;
             Suit suit;
+            Card() : rank(Rank::UNDEF_RANK), suit(Suit::UNDEF_SUIT) {};
+            Card(Rank r, Suit s) : rank(r), suit(s) {};
+            const Rank get_rank() const { return rank; }
+            const Suit get_suit() const { return suit; }
+            const int get_rank_as_int() const { return static_cast<int>(rank);}
+            const char get_rank_as_char() const {return rank_to_char_map[rank]; }
         
     };
     inline bool operator<(Card a, Card b) { return a.get_rank_as_int() < b.get_rank_as_int(); }

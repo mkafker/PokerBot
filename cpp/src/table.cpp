@@ -2,9 +2,6 @@
 #include "player.h"
 namespace Poker {
 
-            Table::Table() {
-              reset();
-            }
             std::shared_ptr<Deck>   Table::getDeck() { return std::make_shared<Deck>(deck); }
 
             void Table::reset(int n) {
@@ -28,36 +25,36 @@ namespace Poker {
                 // Deals everyone two cards
                 for(Player& p : player_list) {
                     p.hand.clear();
-                    p.hand.add(deck.pop_card());
-                    p.hand.add(deck.pop_card());
+                    p.hand.emplace_back(deck.pop_card());
+                    p.hand.emplace_back(deck.pop_card());
                 }
             }
-            Player& Table::get_player_by_position(PlayerPosition p) {
-                auto it = std::find_if(player_list.begin(), player_list.end(), [p](Player& a){ return a.getPosition()==p; });
-                if( it != player_list.end()) {
-                    return *it;
+            std::vector<Player*> Table::getActivePlayers(std::vector<Player*> pvector) { 
+                // Returns a vector of pointers to players that are active
+                std::vector<Player*> ret;
+                if( !pvector.empty() ) {
+                    std::copy_if(pvector.begin(), pvector.end(), std::back_inserter(ret), [](const Player* p) { return p->isActive; } );
                 }
-                throw std::runtime_error("No player is UTG! Something went terribly wrong.");
+                return std::vector<Player*>();
             }
-            
-            std::list<Player*> Table::getPlayersInOrder(std::list<Player*> plist) {
-                // returns a list of pointers to players in the correct (game) order
-                auto comp = [](const Player& a, const Player& b) -> bool { return a->getPosition() < b->getPosition(); };
-                if( !plist.empty() ) {
-                    plist.sort( comp );
-                    return plist;
+            std::vector<Player*> Table::getPlayersInOrder(std::vector<Player*> pvector) {
+                // returns a vector of pointers to players in the correct (game) order
+                auto comp = [](const Player* a, const Player* b) -> bool { return a->getPosition() < b->getPosition(); };
+                if( !pvector.empty() ) {
+                    std::sort(pvector.begin(), pvector.end(), comp);
+                    return pvector;
                 }
-                    //std::transform(player_list.begin(), player_list.end(), std::back_inserter(ret), [](Player& a) { return &a; } );
-                return std::list<Player*>();
+                    //std::transform(player_vector.begin(), player_vector.end(), std::back_inserter(ret), [](Player& a) { return &a; } );
+                return std::vector<Player*>();
             }
 
-            std::list<Player*> Table::getNonBankruptPlayers(std::list<Player*> plist) {
-                std::list<Player*> nbp;
+            std::vector<Player*> Table::getNonBankruptPlayers(std::vector<Player*> pvector) {
+                std::vector<Player*> nbp;
                 auto isBR = [] (Player* a) -> bool { return a->bankroll <= 0; };
-                if( plist.empty() ) {
-                    std::transform(player_list.begin(), player_list.end(), std::back_inserter(plist), [] (Player& a) {return &a; });
+                if( pvector.empty() ) {
+                    std::transform(player_list.begin(), player_list.end(), std::back_inserter(pvector), [] (Player& a) {return &a; });
                 }
-                std::remove_copy_if(plist.begin(), plist.end(), std::back_inserter(nbp), isBR);
+                std::remove_copy_if(pvector.begin(), pvector.end(), std::back_inserter(nbp), isBR);
                 return nbp;
             }
 
@@ -69,7 +66,9 @@ namespace Poker {
                 }
             }
 
-    
+            void Table::shuffleDeck() {
+                this->deck.shuffle(g);
+            }
 
 
 }

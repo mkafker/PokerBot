@@ -2,10 +2,9 @@
 #include <random>
 
 namespace Poker{
-    Player::Player() {};
     Player::Player(PlayerPosition p) : position { p } {};
     Player::Player(int p)  { playerID = p; };
-    Player::Player(Hand h) : hand { h } {};
+    Player::Player(int pos, int pID) { position = static_cast<PlayerPosition>(pos); playerID = pID; }
 
     PlayerMove Player::makeAIMove(std::shared_ptr<Table> info) {
         // Performs a random valid move
@@ -38,10 +37,11 @@ namespace Poker{
     }
 
     void Player::incPosition() {
+        // TODO: rework
         this->position = static_cast<PlayerPosition>(static_cast<int>(this->position) + 1 % 6 ) ;
     }
 
-    void Player::printPlayerMove(PlayerMove pmove) {
+    void printPlayerMove(const Player& player, const PlayerMove& pmove) {
         auto move = pmove.move;
         std::unordered_map<Move, std::string> pastTenseMap {
             {Move::MOVE_CALL, "called "},
@@ -50,14 +50,10 @@ namespace Poker{
             {Move::MOVE_ALLIN, "is all in "},
             {Move::MOVE_UNDEF, "undef!!!!!!"}
         };
-        std::cout << "Player " << playerID << " " << PlayerPosition_to_String[this->position] << ": ";
-        this->hand.print();
-        std::cout << pastTenseMap[move] << pmove.bet_amount << " (prev. bank: " << this->bankroll << ")" << std::endl;
+        std::cout << "Player " << player.playerID << " " << PlayerPosition_to_String[player.position] << ": ";
+        std::cout << pastTenseMap[move] << pmove.bet_amount << " (prev. bank: " << player.bankroll << ")" << std::endl;
     }
 
-    void Player::resetHand() {
-        this->hand.clear();
-    }
     inline bool Player::isBankrupt() { return this->bankroll <= 0; }
     
 }
