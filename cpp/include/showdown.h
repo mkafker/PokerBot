@@ -30,7 +30,7 @@ namespace Poker {
         std::vector<Card> kickers;          
     };
     static FullHandRank nullFHR;            // for erroneous FHRs
-    inline bool operator==(FullHandRank& a, FullHandRank& b) {
+    inline bool operator==(const FullHandRank& a, const FullHandRank& b) {
         bool tmp = true;
         if(a.handrank != b.handrank) tmp = false;
         if(a.kickers != b.kickers) tmp = false;
@@ -54,14 +54,11 @@ namespace Poker {
             std::vector<Card>       cards;          // array of cards, has between 2 and 7 cards
             size_t                  numCards;      // number of cards
             FullHandRank            rank;           // full hand rank information            
-            Hand() {
-                numCards = 0;
-            }
-            Hand(const Hand&) {};
             Hand(std::vector<Card> cards_in) {
                 cards = cards_in;
                 numCards = cards_in.size();
             }
+            Hand() = default;
             void sortCards() {
                 // Sort hand by card rank
                 std::sort(cards.begin(), cards.end(), [](Card a, Card b) { return a<b; });
@@ -84,12 +81,14 @@ namespace Poker {
             
             FullHandRank getFullHandRank() const { return rank; }
 
-            static FullHandRank calcFullHandRank(Hand* hand) {
+            static const FullHandRank calcFullHandRank(const Hand* hand_in) {
+                Hand hand = *hand_in;
+                
                 FullHandRank ret;
-                hand->sortCardsDescending();
+                hand.sortCardsDescending();
 
-                const size_t num_cards = hand->cards.size();
-                auto   cards     = hand->cards;
+                const size_t num_cards = hand.cards.size();
+                auto   cards     = hand.cards;
 
                 std::vector<Card>     winningCards;
                 std::vector<Card>     kickerCards;
@@ -229,7 +228,7 @@ namespace Poker {
                 return ret;
                 
             }
-        static FullHandRank& showdownFHR(FullHandRank& A, FullHandRank& B) {
+        static const FullHandRank& showdownFHR(const FullHandRank& A, const FullHandRank& B) {
             // Returns true if B beats A
 
             if( A.handrank < B.handrank ) return B;
@@ -261,7 +260,7 @@ namespace Poker {
             std::transform(hands_begin, hands_end, std::back_inserter(FHRs), [](Hand* h) {  return calcFullHandRank(h); });
             
 
-            auto FHRComparator = [](FullHandRank& a, FullHandRank& b) -> bool {
+            auto FHRComparator = [](const FullHandRank& a, const FullHandRank& b) -> bool {
                 return showdownFHR(a, b) == b;
             };
             // determine best hand by HandRank (not card values)

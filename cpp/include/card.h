@@ -4,7 +4,7 @@
 #include <unordered_map>
 #include <random>
 #include <vector>
-
+#include <algorithm>
 
 namespace Poker {
     enum class Suit : char {
@@ -90,7 +90,6 @@ namespace Poker {
     class Deck {
         public:
             std::vector<Card> cards;         // array to hold cards
-            int                  index;         // index of top of deck
             Deck() {
                 constexpr int nRanks = 13;
                 for(int i=0; i<nRanks; i++) {
@@ -99,31 +98,41 @@ namespace Poker {
                     cards.emplace_back(Card(static_cast<Rank>(i), Suit::HEART));
                     cards.emplace_back(Card(static_cast<Rank>(i), Suit::SPADE));
                 }
-                index = 51;
             }
             void shuffle(std::mt19937_64 &g) {
                 
                 std::shuffle(cards.begin(), cards.end(), g);
             }
-            auto pop_card() {
-                if( index == 0) return Card(); // error
-                // move card to discard
-                
-                Card ret = cards[index];
-                cards[index+1] = Card();
-                index--;
+            size_t size() const { return cards.size(); }
+            const Card pop_card() {
+                if( cards.size() == 0 ) return Card(); // error
+                Card ret = cards.back();
+                cards.pop_back();
                 return ret;
             }
-            void push_card(Card& a) {
-                if( index == 51 ) std::cerr << "Tried to add a card to a full deck." << std::endl; // error
-                index++;
-                cards[index] = a;
+            void push_card(const Card& a) {
+                if( cards.size() == 51 ) std::cerr << "Tried to add a card to a full deck." << std::endl; // error
+                cards.emplace_back(a);
             }
-
-        
+            Deck(std::vector<Card> cardComplement) {
+              // Deck constructor for all cards EXCEPT the argument
+              // TODO: make this fast
+              constexpr int nRanks = 13;
+              for(int i=0; i<nRanks; i++) {
+                  cards.emplace_back(Card(static_cast<Rank>(i), Suit::CLUB));
+                  cards.emplace_back(Card(static_cast<Rank>(i), Suit::DIAMOND));
+                  cards.emplace_back(Card(static_cast<Rank>(i), Suit::HEART));
+                  cards.emplace_back(Card(static_cast<Rank>(i), Suit::SPADE));
+              }
+              for(Card c : cardComplement) {
+                auto it = std::find(cards.begin(), cards.end(), c);
+                if( *it == c)
+                  cards.erase(it);
+              }
+            }
     };
     inline std::ostream& operator<<(std::ostream& stream, Deck &a) { 
-        for(int i=0; i<a.index; i++ )
+        for(int i=0; i<a.size(); i++ )
             stream << a.cards[i] << " ";
         return stream;
     }
