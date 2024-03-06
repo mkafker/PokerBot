@@ -13,15 +13,14 @@ namespace Poker {
     class Game {
         public:
             std::shared_ptr<Table>      table;                              // The public members of Table are what are visible to all and will serve as input to the AI
-            int                         numPlayers;                         // Need a new game to change number of players
 
             Game () {
                 reset();
             }
             void reset(int n = 6) {
-                numPlayers = n;
-                table = std::make_shared<Table>();                          // make table (and deck)
-                std::vector<PlayerPosition> playerPositionList = numPlayersToPositionList(numPlayers);
+                table = std::make_shared<Table>();
+                table->getDeck().shuffle();
+                std::vector<PlayerPosition> playerPositionList = numPlayersToPositionList(n);
                 for(int i = 0; i < numPlayers; i++ ) {
                     Player p;
                     p.setPosition(playerPositionList[i]);
@@ -35,29 +34,35 @@ namespace Poker {
             }
 
             void doGame() {
+                // Call reset() before this function
                 std::list<Player*> players = table->getPlayersInOrder();
                 std::list<Player*> nonBankruptPlayers = table->getNonBankruptPlayers();
                 while( nonBankruptPlayers.size() > 1 ) {
                     nonBankruptPlayers = table->getNonBankruptPlayers(nonBankruptPlayers);
-                    doRound(nonBankruptPlayers);
+                    doRound();
                 }
                 Player* winner = nonBankruptPlayers.front();
             }
 
-            std::unique_ptr<Player> doRound(std::list<Player*> activePlayers = std::list<Player*>()) {
-                if( activePlayers.size() == 1 ) return nullptr;
+            std::shared_ptr<Player> doRound() {
+                // Goes around the table taking bets until every player is all-in, folded, or called, then does a showdown and returns a shared_ptr to the winner
+                //
+                // first, get a list of pointers to active players
+                // Active players are those that are not bankrupt
+                std::list<Player*> activePlayers = table->getActivePlayers();
                 activePlayers = table->getPlayersInOrder(activePlayers);
+                if( activePlayers.size() == 1 ) return std::make_shared<Player>(*activePlayers.first());
 
-                std::unordered_map<Player*, PlayerMove> playerStatuses;                   // holds playing, all-in, or fold status
-                Player* winningPlayer;
+                std::unordered_map<Player*, PlayerMove> playerStatuses;                   // holds all-in or fold status
+                std::shared_ptr<Player> winningPlayer;
                 table->resetPlayerHands();
 
                 // deal two cards to all
                 table->dealAllPlayersCards();
 
-                table->street = 0;      // preflop
-                table->currentBet   = table->bigBlind;
-                table->pot          = table->currentBet;
+                table->street = 0;                      // set to preflop
+                table->minimumBet   = table->bigBlind; 
+                table->pot          = table->minimumBet;
 
                 while( table->street < 4) {
                     //std::cout << "================================================" << std::endl;
@@ -73,7 +78,7 @@ namespace Poker {
                             //std::cout << "---------------------------------------" << std::endl;
                             keepgoing = false;
                             std::list<Player*>::iterator i = activePlayers.begin();
-                            const int currentBetBeforeRound = table->currentBet;
+                            const int minimumBetBeforeRound = table->minimumBet;
                             while (i != activePlayers.end()) {
                                 Player* P = *i;
                                 if( P->position == PlayerPosition::POS_BB && table->street != 0) {
@@ -89,14 +94,14 @@ namespace Poker {
 
                                 const bool allIn = (Pmove.bet_amount == P->bankroll);
                                 const bool allInOrRaise = Pmove.move == Move::MOVE_RAISE || allIn;
-                                if( Pmove.move == Move::MOVE_RAISE || Pmove.move == Move::MOVE_ALLIN) table->currentBet = Pmove.bet_amount;
+                                if( Pmove.move == Move::MOVE_RAISE || Pmove.move == Move::MOVE_ALLIN) table->minimumBet = Pmove.bet_amount;
 
                                 table->pot  += Pmove.bet_amount;
                                 P->bankroll -= Pmove.bet_amount;
 
                                 // remove all-in or folded players from play
                                 if( allIn ) playerStatuses[P] = Pmove;
-                                //std::cout << "Current bet: " << table->currentBet << std::endl;
+                                //std::cout << "Current bet: " << table->minimumBet << std::endl;
                                 //std::cout << "Current pot: " << table->pot << std::endl;
 
                                 
@@ -107,7 +112,7 @@ namespace Poker {
                                 }
                                 else {
                                     // Do another round the table only if somebody raised
-                                    if( currentBetBeforeRound != table->currentBet ) { keepgoing = true; }
+                                    if( minimumBetBeforeRound != table->minimumBet ) { keepgoing = true; }
                                     i++;
                                 }
                             }
@@ -196,7 +201,7 @@ namespace Poker {
                 }
                 std::cout << "Community cards: " << table->community_cards << std::endl;
                 std::cout << "Pot: " << table->pot << std::endl;
-                std::cout << "Current Bet: " << table->currentBet << std::endl;
+                std::cout << "Current Bet: " << table->minimumBet << std::endl;
             }
 
     };

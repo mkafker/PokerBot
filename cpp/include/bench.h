@@ -56,7 +56,6 @@ namespace Poker {
           if( Hand::showdownFHR(bestFHR, winFHR) == winFHR )  {
               bestPlayer = std::move(winningPlayer);
           }
-
       }
 
       std::chrono::duration<double> duration = std::chrono::steady_clock::now() - start;
@@ -127,8 +126,6 @@ namespace Poker {
       const double winRateA = double(winCountA)/N;
       const double winRateB = double(winCountB)/N;
       const int64_t numDraws = N - winCountA - winCountB;
-      //std::cout << "Best hand: " << std::endl;
-      //std::cout << lastHand.handrank << " " << lastHand.maincards << "| " << lastHand.kickers << std::endl;
       std::cout << "A winrate: " << winRateA*100.0 << "%" << std::endl;
       std::cout << "B winrate: " << winRateB*100.0 << "%" << std::endl;
       std::cout << "number of draws: " << numDraws << std::endl;

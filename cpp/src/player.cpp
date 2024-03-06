@@ -29,8 +29,8 @@ namespace Poker{
                 myMove.move = Move::MOVE_ALLIN;
         }
         if( myMove.move == Move::MOVE_FOLD) myMove.bet_amount = 0;
-        if( myMove.move == Move::MOVE_CALL) myMove.bet_amount = info->currentBet;
-        if( myMove.move == Move::MOVE_RAISE) myMove.bet_amount = info->currentBet * 2;
+        if( myMove.move == Move::MOVE_CALL) myMove.bet_amount = info->minimumBet;
+        if( myMove.move == Move::MOVE_RAISE) myMove.bet_amount = info->minimumBet * 2;
         if( myMove.move == Move::MOVE_ALLIN) myMove.bet_amount = this->bankroll;
         myMove.bet_amount = clamp(myMove.bet_amount, 0, this->bankroll);
         if( myMove.bet_amount == this->bankroll) myMove.move = Move::MOVE_ALLIN;
