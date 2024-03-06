@@ -2,6 +2,7 @@
 #include <random>
 
 namespace Poker{
+    Player::Player() = default;
     Player::Player(PlayerPosition p) : position { p } {};
     Player::Player(int p)  { playerID = p; };
     Player::Player(int pos, int pID) { position = static_cast<PlayerPosition>(pos); playerID = pID; }
@@ -55,5 +56,6 @@ namespace Poker{
     }
 
     inline bool Player::isBankrupt() { return this->bankroll <= 0; }
+    void Player::resetHand() { this->hand.clear(); }
     
 }

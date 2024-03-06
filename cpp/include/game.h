@@ -7,9 +7,6 @@
 
 
 namespace Poker {
-
-
-
     class Game {
         public:
             std::shared_ptr<Table>      table;                              // The public members of Table are what are visible to all and will serve as input to the AI
