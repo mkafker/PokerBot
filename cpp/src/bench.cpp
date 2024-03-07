@@ -85,10 +85,78 @@ namespace Poker {
 
 
 
-  void monteCarloHandRankCompare(const std::vector<Card>& cardsA, const std::vector<Card>& cardsB) {
+  void monteCarloHandRankCompare(const std::vector<Card>& cardsA, const std::vector<Card>& cardsB, const double& varTarget) {
       std::random_device rd;
       std::mt19937_64 g(rd());
-      uint64_t N = 1000000;
+      uint64_t N = 0;
+
+      uint64_t winCountA = 0;
+      uint64_t winCountB = 0;
+
+      constexpr int numComCards = 5;
+      
+      double avgEstimate    = 0.5;
+      double varEstimate = 1.0;
+      uint64_t updateInterval = 1000;    // calculate variance every # rounds
+      bool first = true;
+      
+      std::vector<Card> cardsUnion (cardsA.begin(), cardsA.end());
+      cardsUnion.insert(cardsUnion.end(), cardsB.begin(), cardsB.end());
+
+      auto start = std::chrono::steady_clock::now();
+      while ( varEstimate > varTarget or first ) {
+        first = false;
+        winCountA = 0;
+        winCountB = 0;
+        for(int iN = 0; iN < updateInterval; iN++) {
+          std::vector<Card> communityCards(numComCards);
+          std::vector<Card> cardsAMutable(cardsA);
+          std::vector<Card> cardsBMutable(cardsB);
+          //make new deck without players' cards
+          Deck newdeck(cardsUnion);
+          newdeck.shuffle(g);
+          for(short j=0; j<numComCards; j++)
+              communityCards[j]=newdeck.pop_card();
+          cardsAMutable.insert(cardsAMutable.end(), communityCards.begin(), communityCards.end());
+          cardsBMutable.insert(cardsBMutable.end(), communityCards.begin(), communityCards.end());
+
+          const FullHandRank fhrA = calcFullHandRank(cardsAMutable);
+          const FullHandRank fhrB = calcFullHandRank(cardsBMutable);
+          auto showdownResult = showdownFHR(fhrA, fhrB);
+          
+          if(showdownResult == fhrA) winCountA++;
+          else if(showdownResult == fhrB) winCountB++;
+        }
+
+        const double roundWinRate = double(winCountA) / updateInterval;
+        N+=updateInterval;
+        const double oldAvgEstimate = avgEstimate;
+        avgEstimate = avgEstimate + (roundWinRate - avgEstimate)/updateInterval; // update avgEstimate
+        varEstimate = varEstimate + ((roundWinRate - oldAvgEstimate)*(roundWinRate - avgEstimate) - varEstimate)/updateInterval;
+        //std::cout << "roundWinRate = " << roundWinRate << std::endl;
+        //std::cout << "avgEstimate = " << avgEstimate << std::endl;
+        //std::cout << "varEstimate = " << varEstimate << std::endl;
+        //std::cout << "N = " << N << std::endl;
+
+      }
+
+
+      std::chrono::duration<double> duration = std::chrono::steady_clock::now() - start;
+      const double winRateA = double(winCountA)/N;
+      const double winRateB = double(winCountB)/N;
+      //const int64_t numDraws = N - winCountA - winCountB;
+      std::cout << "A winrate: " << avgEstimate*100.0 << "%" << std::endl;
+      //std::cout << "number of draws: " << numDraws << std::endl;
+      std::cout << N << " hands calculated in " << duration.count() << " seconds, or " << double(N)/duration.count() << " hands/second" << std::endl;
+  }
+
+
+
+
+
+  void monteCarloHandRankCompare(const std::vector<Card>& cardsA, const std::vector<Card>& cardsB, const uint64_t& N) {
+      std::random_device rd;
+      std::mt19937_64 g(rd());
 
       uint64_t winCountA = 0;
       uint64_t winCountB = 0;
@@ -99,7 +167,8 @@ namespace Poker {
       cardsUnion.insert(cardsUnion.end(), cardsB.begin(), cardsB.end());
 
       auto start = std::chrono::steady_clock::now();
-
+      winCountA = 0;
+      winCountB = 0;
       for(int iN = 0; iN < N; iN++) {
         std::vector<Card> communityCards(numComCards);
         std::vector<Card> cardsAMutable(cardsA);
@@ -120,16 +189,15 @@ namespace Poker {
         else if(showdownResult == fhrB) winCountB++;
       }
 
+
       std::chrono::duration<double> duration = std::chrono::steady_clock::now() - start;
       const double winRateA = double(winCountA)/N;
-      const double winRateB = double(winCountB)/N;
+      //const double winRateB = double(winCountB)/N;
       const int64_t numDraws = N - winCountA - winCountB;
       std::cout << "A winrate: " << winRateA*100.0 << "%" << std::endl;
-      std::cout << "B winrate: " << winRateB*100.0 << "%" << std::endl;
       std::cout << "number of draws: " << numDraws << std::endl;
       std::cout << N << " hands calculated in " << duration.count() << " seconds, or " << double(N)/duration.count() << " hands/second" << std::endl;
   }
-
 
 
 

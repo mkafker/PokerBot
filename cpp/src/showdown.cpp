@@ -90,7 +90,8 @@ namespace Poker {
           if (is_straight && is_flush && (flush_cards == straight_cards)) {
               is_straight_flush = true;
           }
-          
+
+
           int three_count = 0; //durrrr
           int two_count   = 0;
           for(const auto& ranks_pair : ranks) {
