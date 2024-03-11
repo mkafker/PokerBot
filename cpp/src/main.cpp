@@ -42,7 +42,7 @@ int main() {
     std::vector<Card> myCards  = { Card(Rank::C_A, Suit::CLUB), Card(Rank::C_K, Suit::CLUB) };
     std::vector<Card> theirCards  = { Card(Rank::C_A, Suit::DIAMOND), Card(Rank::C_K, Suit::SPADE) };
     //monteCarloHandRankCompare( myCards, theirCards, 0.01 );
-    //monteCarloHandRankCompare( myCards, theirCards, (uint64_t)1000000);
+    monteCarloHandRankCompare( myCards, theirCards, (uint64_t)1000000);
     benchmarkRounds();
 
     return 0;

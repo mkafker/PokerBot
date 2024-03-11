@@ -89,14 +89,14 @@ namespace Poker {
                 table.pot          = table.minimumBet;
 
                 while( table.street < 4) {
-                    std::cout << "================================================" << std::endl;
-                    std::cout << "Phase " << table.street << " " << table.communityCards <<  std::endl;
+                    //std::cout << "================================================" << std::endl;
+                    //std::cout << "Phase " << table.street << " " << table.communityCards <<  std::endl;
                     
                     table.dealCommunityCards( table.street );
                     
                     bool keepgoing = true;                                                            // indicates that we need another round of betting
                     while(keepgoing) {
-                        std::cout << "---------------------------------------" << std::endl;
+                        //std::cout << "---------------------------------------" << std::endl;
                         keepgoing = false;
                         auto i = bettingPlayers.begin();
                         const int minimumBetBeforeRound = table.minimumBet;
@@ -122,8 +122,8 @@ namespace Poker {
                             table.pot  += Pmove.bet_amount;
                             P->bankroll -= Pmove.bet_amount;
 
-                            std::cout << "Current bet: " << table.minimumBet << std::endl;
-                            std::cout << "Current pot: " << table.pot << std::endl;
+                            //std::cout << "Current bet: " << table.minimumBet << std::endl;
+                            //std::cout << "Current pot: " << table.pot << std::endl;
 
 
                             // remove player from game if folded or all in
@@ -165,7 +165,7 @@ namespace Poker {
                     winningPlayer->FHR = fhr;
                     lastRoundWinner = winningPlayer;
 
-                    std::cout << "Guess who won! Player " << winningPlayer->playerID ;
+                    //std::cout << "Guess who won! Player " << winningPlayer->playerID ;
                     //<< " with a " << 
                     //fhr.handrank << " " << fhr.maincards << "| " << fhr.kickers << std::endl;
 

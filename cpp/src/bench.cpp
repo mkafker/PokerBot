@@ -52,10 +52,13 @@ namespace Poker {
           auto game = std::make_shared<Game>();
           game->doRound();
           std::shared_ptr<Player> winningPlayer = game->lastRoundWinner;
-          auto winFHR = winningPlayer->FHR;
-          auto bestFHR = bestPlayer->FHR;
-          if( showdownFHR(bestFHR, winFHR) == winFHR )  {
-              bestPlayer = std::move(winningPlayer);
+          // Skip if there wasn't a winner (everyone folded for some reason)
+          if( winningPlayer ) {
+            auto winFHR = winningPlayer->FHR;
+            auto bestFHR = bestPlayer->FHR;
+            if( showdownFHR(bestFHR, winFHR) == winFHR )  {
+                bestPlayer = std::move(winningPlayer);
+            }
           }
       }
 
