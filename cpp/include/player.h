@@ -44,17 +44,17 @@ namespace Poker{
     };
     static std::vector<PlayerPosition> numPlayersToPositionList (int n) {
         std::vector<PlayerPosition> ret;
-        ret.emplace_back(PlayerPosition::POS_BTN);
-        ret.emplace_back(PlayerPosition::POS_BB);
-        for(int j = n; j > 0; j--) {
+        for(int j = n; j > 2; j--) {
             if( j == 9 )            ret.emplace_back(PlayerPosition::POS_UTG3);
-            else if( n == 8 )       ret.emplace_back(PlayerPosition::POS_UTG2);
-            else if( n == 7 )       ret.emplace_back(PlayerPosition::POS_HJ);
-            else if( n == 6 )       ret.emplace_back(PlayerPosition::POS_UTG1);
-            else if( n == 5 )       ret.emplace_back(PlayerPosition::POS_CO);
-            else if( n == 4 )       ret.emplace_back(PlayerPosition::POS_UTG);
-            else if( n == 3 )       ret.emplace_back(PlayerPosition::POS_SB);            
+            else if( j == 8 )       ret.emplace_back(PlayerPosition::POS_UTG2);
+            else if( j == 7 )       ret.emplace_back(PlayerPosition::POS_HJ);
+            else if( j == 6 )       ret.emplace_back(PlayerPosition::POS_UTG1);
+            else if( j == 5 )       ret.emplace_back(PlayerPosition::POS_CO);
+            else if( j == 4 )       ret.emplace_back(PlayerPosition::POS_UTG);
+            else if( j == 3 )       ret.emplace_back(PlayerPosition::POS_SB);            
         }
+        ret.emplace_back(PlayerPosition::POS_BB);
+        ret.emplace_back(PlayerPosition::POS_BTN);
         return ret;
     };
 
@@ -66,7 +66,6 @@ namespace Poker{
             PlayerPosition  position;                      // seat the player is on. 0 = UTG, 1 = MP, 2 = CO, 3 = BTN, 4 = SB, 5 = BB 
             PlayerMove  move;
             FullHandRank FHR;
-            bool isActive;
             std::vector<Card> hand;
             
             Player();
@@ -88,6 +87,11 @@ namespace Poker{
 
     inline std::ostream& operator<<(std::ostream& stream, PlayerPosition &a) { 
         stream << PlayerPosition_to_String[a];
+        return stream;
+    }
+
+    inline std::ostream& operator<<(std::ostream& stream, Player &a) { 
+        stream << "Player " << a.playerID << " (" <<  PlayerPosition_to_String[a.position] << ")";
         return stream;
     }
 

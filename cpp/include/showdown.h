@@ -60,8 +60,7 @@ namespace Poker {
 
     const FullHandRank& showdownFHR(const FullHandRank& A, const FullHandRank& B);
 
-    std::vector<Card>* showdown(std::vector<std::vector<Card>*>::iterator hands_begin, std::vector<std::vector<Card>*>::iterator hands_end);
-    
+    std::vector<std::vector<Card>>::iterator showdown( std::vector<std::vector<Card>>& cardsIn );
 };
 
 

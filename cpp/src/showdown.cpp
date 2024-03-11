@@ -199,33 +199,28 @@ namespace Poker {
       return nullFHR;
   }
 
-  std::vector<Card>* showdown(std::vector<std::vector<Card>*>::iterator hands_begin, std::vector<std::vector<Card>*>::iterator hands_end) {
-      if (std::distance(hands_begin, hands_end)==0) 
-          return nullptr;
+  std::vector<std::vector<Card>>::iterator showdown( std::vector<std::vector<Card>>& cardsIn ) {
+      if (std::distance(cardsIn.begin(), cardsIn.end()) == 0)
+          return std::vector<std::vector<Card>>::iterator();
       
       // calculate full hand rank for each hand
       std::vector<FullHandRank> FHRs;
-      std::transform(hands_begin, hands_end, std::back_inserter(FHRs), [](std::vector<Card>* h) {  return calcFullHandRank(*h); });
+      std::transform(cardsIn.cbegin(), cardsIn.cend(), std::back_inserter(FHRs), [](std::vector<Card> h) {  return calcFullHandRank(h); });
       
-
       auto FHRComparator = [](const FullHandRank& a, const FullHandRank& b) -> bool {
           return showdownFHR(a, b) == b;
       };
-      // determine best hand by HandRank (not card values)
-      auto handWinner = std::max_element(FHRs.begin(), FHRs.end(), FHRComparator);
-
-      if( handWinner != FHRs.end()) {
-          // get back original hand
-          size_t i = std::distance(FHRs.begin(), handWinner);
-          auto it = hands_begin;
-          // need random acces!!!!
-          // TODO: figure out what I meant by the above comment and fix it
-          for( int j=0;j<i;j++ )
-              it++;
-          return *it; 
-      }
+      auto winningHandIterator = cardsIn.begin();
+      // caution... max_element returns only the first max value
+      std::vector<FullHandRank>::iterator handWinnerFHR = std::max_element(FHRs.begin(), FHRs.end(), FHRComparator);        
+      advance(winningHandIterator, std::distance(FHRs.begin(), handWinnerFHR));
+      auto test = FHRs.end();
+      // TODO: figure out why this wasn't working
+      //if( handWinnerFHR != FHRs.end()) {
+        return winningHandIterator;
+      //}
       
       // draw
-      return nullptr;
+      return std::vector<std::vector<Card>>::iterator();
   }
 }

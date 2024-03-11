@@ -45,12 +45,13 @@ namespace Poker {
       uint64_t N = 1000;
       auto start = std::chrono::steady_clock::now();
       auto game1 = std::make_shared<Game>();
-      std::shared_ptr<Player> bestPlayer = game1->doRound();
+      game1->doRound();
+      std::shared_ptr<Player> bestPlayer = game1->lastRoundWinner;
       int iT = 0;
       for(int iN = 0; iN < N; iN++) {
           auto game = std::make_shared<Game>();
-          std::shared_ptr<Player> winningPlayer = game->doRound();
-
+          game->doRound();
+          std::shared_ptr<Player> winningPlayer = game->lastRoundWinner;
           auto winFHR = winningPlayer->FHR;
           auto bestFHR = bestPlayer->FHR;
           if( showdownFHR(bestFHR, winFHR) == winFHR )  {
@@ -133,10 +134,10 @@ namespace Poker {
         const double oldAvgEstimate = avgEstimate;
         avgEstimate = avgEstimate + (roundWinRate - avgEstimate)/updateInterval; // update avgEstimate
         varEstimate = varEstimate + ((roundWinRate - oldAvgEstimate)*(roundWinRate - avgEstimate) - varEstimate)/updateInterval;
-        //std::cout << "roundWinRate = " << roundWinRate << std::endl;
-        //std::cout << "avgEstimate = " << avgEstimate << std::endl;
-        //std::cout << "varEstimate = " << varEstimate << std::endl;
-        //std::cout << "N = " << N << std::endl;
+        std::cout << "roundWinRate = " << roundWinRate << std::endl;
+        std::cout << "avgEstimate = " << avgEstimate << std::endl;
+        std::cout << "varEstimate = " << varEstimate << std::endl;
+        std::cout << "N = " << N << std::endl;
 
       }
 
@@ -192,9 +193,10 @@ namespace Poker {
 
       std::chrono::duration<double> duration = std::chrono::steady_clock::now() - start;
       const double winRateA = double(winCountA)/N;
-      //const double winRateB = double(winCountB)/N;
+      const double winRateB = double(winCountB)/N;
       const int64_t numDraws = N - winCountA - winCountB;
       std::cout << "A winrate: " << winRateA*100.0 << "%" << std::endl;
+      std::cout << "B winrate: " << winRateB*100.0 << "%" << std::endl;
       std::cout << "number of draws: " << numDraws << std::endl;
       std::cout << N << " hands calculated in " << duration.count() << " seconds, or " << double(N)/duration.count() << " hands/second" << std::endl;
   }
