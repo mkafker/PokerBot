@@ -12,9 +12,11 @@ namespace Poker {
     class Table {
         private:
             Deck deck;
-            mt19937_64 g;
         public:
-            vector<Player> playerList;
+            shared_ptr<random_device> rd;
+            // playerList contains Player classes which by default call every time
+            // Overload the virtual function makeMove to define new behavior
+            vector<shared_ptr<Player>> playerList;
             
             vector<Card> communityCards;
             int                 street              = 0;                // phase of the game. 0 = preflop, 1 = flop, 2 = turn, 3 = river
@@ -23,9 +25,10 @@ namespace Poker {
             int                 pot                 = 0;
             int                 minimumBet          = 0;
             Table() = default;
+            Table(const Table& t) = default;
             shared_ptr<Deck>   getDeck();
 
-            void reset(int n = 6);
+            void resetDeck(random_device &rd);
             void dealCommunityCards(int );
             void dealPlayersCards(const std::vector<shared_ptr<Player>>);
             void resetPlayerHands();

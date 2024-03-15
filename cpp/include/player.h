@@ -20,7 +20,7 @@ namespace Poker{
     };
 
     enum class PlayerPosition : int {
-        POS_UTG = 0,
+        POS_UTG  = 0,
         POS_UTG1 = 1,
         POS_UTG2 = 2,
         POS_UTG3 = 3,
@@ -28,7 +28,7 @@ namespace Poker{
         POS_CO   = 5,
         POS_BTN  = 6,
         POS_SB   = 7,
-        POS_BB   = 8
+        POS_BB   = 8,
     };
 
     static std::unordered_map<PlayerPosition, std::string> PlayerPosition_to_String {
@@ -42,21 +42,66 @@ namespace Poker{
         {PlayerPosition::POS_HJ     , "HJ"},
         {PlayerPosition::POS_BTN    , "BTN"}
     };
-    static std::vector<PlayerPosition> numPlayersToPositionList (int n) {
+    static std::vector<PlayerPosition> numPlayersToPositionList (const int n) {
+        // Returns a lits of player positions in betting order
+        // For two player games, SB is also BTN,
+        // but we will just call him the SB
         std::vector<PlayerPosition> ret;
-        for(int j = n; j > 2; j--) {
-            if( j == 9 )            ret.emplace_back(PlayerPosition::POS_UTG3);
-            else if( j == 8 )       ret.emplace_back(PlayerPosition::POS_UTG2);
-            else if( j == 7 )       ret.emplace_back(PlayerPosition::POS_HJ);
-            else if( j == 6 )       ret.emplace_back(PlayerPosition::POS_UTG1);
-            else if( j == 5 )       ret.emplace_back(PlayerPosition::POS_CO);
-            else if( j == 4 )       ret.emplace_back(PlayerPosition::POS_UTG);
-            else if( j == 3 )       ret.emplace_back(PlayerPosition::POS_SB);            
+        typedef PlayerPosition PP;
+        switch (n) {
+            case 2:
+                ret.emplace_back(PP::POS_SB);
+                ret.emplace_back(PP::POS_BB);
+                break;
+            case 3:
+                ret.emplace_back(PP::POS_SB);
+                ret.emplace_back(PP::POS_BB);
+                ret.emplace_back(PP::POS_BTN);
+                break;
+            case 4:
+                ret.emplace_back(PP::POS_SB);
+                ret.emplace_back(PP::POS_BB);
+                ret.emplace_back(PP::POS_UTG);
+                ret.emplace_back(PP::POS_BTN);
+                break;
+            case 5:
+                ret.emplace_back(PP::POS_SB);
+                ret.emplace_back(PP::POS_BB);
+                ret.emplace_back(PP::POS_UTG);
+                ret.emplace_back(PP::POS_CO);
+                ret.emplace_back(PP::POS_BTN);
+                break;
+            case 6:
+                ret.emplace_back(PP::POS_SB);
+                ret.emplace_back(PP::POS_BB);
+                ret.emplace_back(PP::POS_UTG);
+                ret.emplace_back(PP::POS_UTG1);
+                ret.emplace_back(PP::POS_CO);
+                ret.emplace_back(PP::POS_BTN);
+                break;
+            case 7:
+                ret.emplace_back(PP::POS_SB);
+                ret.emplace_back(PP::POS_BB);
+                ret.emplace_back(PP::POS_UTG);
+                ret.emplace_back(PP::POS_UTG1);
+                ret.emplace_back(PP::POS_HJ);
+                ret.emplace_back(PP::POS_CO);
+                ret.emplace_back(PP::POS_BTN);
+                break;
+            case 8:
+                ret.emplace_back(PP::POS_SB);
+                ret.emplace_back(PP::POS_BB);
+                ret.emplace_back(PP::POS_UTG);
+                ret.emplace_back(PP::POS_UTG1);
+                ret.emplace_back(PP::POS_UTG2);
+                ret.emplace_back(PP::POS_HJ);
+                ret.emplace_back(PP::POS_CO);
+                ret.emplace_back(PP::POS_BTN);
+                break;
         }
-        ret.emplace_back(PlayerPosition::POS_BB);
-        ret.emplace_back(PlayerPosition::POS_BTN);
         return ret;
     };
+
 
 
     class Player {
@@ -68,7 +113,7 @@ namespace Poker{
             FullHandRank FHR;
             std::vector<Card> hand;
             
-            Player();
+            Player() = default;
             Player(int p);
             Player(PlayerPosition p);
             Player(int p, int playerID);
@@ -77,11 +122,24 @@ namespace Poker{
             void setPosition(const int& pos) { this->position = static_cast<PlayerPosition>(pos); }
             void setPosition(const PlayerPosition &p) { this->position = p; }
             void incPosition();
-            PlayerMove makeAIMove(std::shared_ptr<Table> info);
             void resetHand();
             inline bool isBankrupt();
+            // Virtual functions to be overridden by Player implementations
+            virtual PlayerMove makeMove(std::shared_ptr<Table> info);
     };
 
+    class RandomMoveAI : public Player {
+        public:
+            // inherit the constructors from the Player class
+            using Player::Player;
+            PlayerMove makeMove(std::shared_ptr<Table> info) override;
+    };
+    class CallAI : public Player {
+        public:
+            using Player::Player;
+            PlayerMove makeMove(std::shared_ptr<Table> info) override;
+    };
+    
     void printPlayerMove(const Player& player, const PlayerMove& move);
 
 
@@ -94,7 +152,5 @@ namespace Poker{
         stream << "Player " << a.playerID << " (" <<  PlayerPosition_to_String[a.position] << ")";
         return stream;
     }
-
-    
 }
 

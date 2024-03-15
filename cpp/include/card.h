@@ -89,6 +89,7 @@ namespace Poker {
     class Deck {
         public:
             std::vector<Card> cards;         // array to hold cards
+            std::mt19937_64 mersenne;
             Deck() {
                 constexpr int nRanks = 13;
                 for(int i=0; i<nRanks; i++) {
@@ -98,9 +99,8 @@ namespace Poker {
                     cards.emplace_back(Card(static_cast<Rank>(i), Suit::SPADE));
                 }
             }
-            void shuffle(std::mt19937_64 &g) {
-                
-                std::shuffle(cards.begin(), cards.end(), g);
+            void shuffle() {
+                std::shuffle(cards.begin(), cards.end(), mersenne);
             }
             size_t size() const { return cards.size(); }
             const Card pop_card() {
@@ -135,7 +135,7 @@ namespace Poker {
             stream << a.cards[i] << " ";
         return stream;
     }
-    inline std::ostream& operator<<(std::ostream& stream, std::vector<Card> &a) { 
+    inline std::ostream& operator<<(std::ostream& stream, std::vector<Card>& a) { 
         for(int i=0; i<a.size(); i++ )
             stream << a.at(i) << " ";
         return stream;

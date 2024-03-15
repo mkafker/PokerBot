@@ -16,7 +16,8 @@ namespace Poker {
       for(int iN = 0; iN < N; iN++) {
           iT++;
           Deck newdeck;
-          newdeck.shuffle(g);
+          newdeck.mersenne = g;
+          newdeck.shuffle();
           std::vector<Card> cards(7);
           for(short j=0; j<7; j++)
               cards[j]=newdeck.pop_card();
@@ -41,8 +42,7 @@ namespace Poker {
       std::cout << lastHand.handrank << " " << lastHand.maincards << "| " << lastHand.kickers << std::endl;
       std::cout << N << " hands calculated in " << duration.count() << " seconds, or " << double(N)/duration.count() << " hands/second" << std::endl;
   }
-  void benchmarkRounds() {
-      uint64_t N = 1000;
+  void benchmarkRounds(uint64_t N) {
       auto start = std::chrono::steady_clock::now();
       auto game1 = std::make_shared<Game>();
       game1->doRound();
@@ -68,15 +68,12 @@ namespace Poker {
                 << " " << bestPlayer->FHR.handrank << " " << bestPlayer->FHR.maincards << "| " << bestPlayer->FHR.kickers << std::endl;
       std::cout << N << " rounds calculated in " << duration.count() << " seconds, or " << double(N)/duration.count() << " rounds/second" << std::endl;
   }
-  void benchmarkGames() {
-
-
-      uint64_t N = 1000;
+  void benchmarkGames(uint64_t N) {
       auto start = std::chrono::steady_clock::now();
-      FullHandRank lastHand;
       int iT = 0;
       for(int iN = 0; iN < N; iN++) {
           auto game = std::make_shared<Game>();
+           game->reset();
            game->doGame();
       }
 
@@ -118,7 +115,8 @@ namespace Poker {
           std::vector<Card> cardsBMutable(cardsB);
           //make new deck without players' cards
           Deck newdeck(cardsUnion);
-          newdeck.shuffle(g);
+          newdeck.mersenne = g;
+          newdeck.shuffle();
           for(short j=0; j<numComCards; j++)
               communityCards[j]=newdeck.pop_card();
           cardsAMutable.insert(cardsAMutable.end(), communityCards.begin(), communityCards.end());
@@ -160,7 +158,6 @@ namespace Poker {
 
   void monteCarloHandRankCompare(const std::vector<Card>& cardsA, const std::vector<Card>& cardsB, const uint64_t& N) {
       std::random_device rd;
-      std::mt19937_64 g(rd());
 
       uint64_t winCountA = 0;
       uint64_t winCountB = 0;
@@ -174,12 +171,14 @@ namespace Poker {
       winCountA = 0;
       winCountB = 0;
       for(int iN = 0; iN < N; iN++) {
+        std::mt19937_64 g(rd());
         std::vector<Card> communityCards(numComCards);
         std::vector<Card> cardsAMutable(cardsA);
         std::vector<Card> cardsBMutable(cardsB);
         //make new deck without players' cards
         Deck newdeck(cardsUnion);
-        newdeck.shuffle(g);
+        newdeck.mersenne = g;
+        newdeck.shuffle();
         for(short j=0; j<numComCards; j++)
             communityCards[j]=newdeck.pop_card();
         cardsAMutable.insert(cardsAMutable.end(), communityCards.begin(), communityCards.end());

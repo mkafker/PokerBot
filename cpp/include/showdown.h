@@ -31,7 +31,6 @@ namespace Poker {
     };
     static FullHandRank nullFHR;            // for erroneous FHRs
 
-
     bool operator==(const FullHandRank& a, const FullHandRank& b);
     std::ostream& operator<<(std::ostream& stream, const HandRank& a);
 
@@ -48,6 +47,11 @@ namespace Poker {
         {HandRank::STRAIGHT_FLUSH, "Straight flush"}
     };
 
+    inline std::ostream& operator<<(std::ostream& stream, FullHandRank& a) { 
+      std::cout << HandRank_to_String[a.handrank] << " " << a.maincards << "| " << a.kickers;
+        return stream;
+    }
+
 
 
 
@@ -60,7 +64,6 @@ namespace Poker {
 
     const FullHandRank& showdownFHR(const FullHandRank& A, const FullHandRank& B);
 
-    std::vector<std::vector<Card>>::iterator showdown( std::vector<std::vector<Card>>& cardsIn );
 };
 
 

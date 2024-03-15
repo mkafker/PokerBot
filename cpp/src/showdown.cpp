@@ -199,28 +199,4 @@ namespace Poker {
       return nullFHR;
   }
 
-  std::vector<std::vector<Card>>::iterator showdown( std::vector<std::vector<Card>>& cardsIn ) {
-      if (std::distance(cardsIn.begin(), cardsIn.end()) == 0)
-          return std::vector<std::vector<Card>>::iterator();
-      
-      // calculate full hand rank for each hand
-      std::vector<FullHandRank> FHRs;
-      std::transform(cardsIn.cbegin(), cardsIn.cend(), std::back_inserter(FHRs), [](std::vector<Card> h) {  return calcFullHandRank(h); });
-      
-      auto FHRComparator = [](const FullHandRank& a, const FullHandRank& b) -> bool {
-          return showdownFHR(a, b) == b;
-      };
-      auto winningHandIterator = cardsIn.begin();
-      // caution... max_element returns only the first max value
-      std::vector<FullHandRank>::iterator handWinnerFHR = std::max_element(FHRs.begin(), FHRs.end(), FHRComparator);        
-      advance(winningHandIterator, std::distance(FHRs.begin(), handWinnerFHR));
-      auto test = FHRs.end();
-      // TODO: figure out why this wasn't working
-      //if( handWinnerFHR != FHRs.end()) {
-        return winningHandIterator;
-      //}
-      
-      // draw
-      return std::vector<std::vector<Card>>::iterator();
-  }
 }

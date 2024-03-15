@@ -2,12 +2,26 @@
 #include <random>
 
 namespace Poker{
-    Player::Player() = default;
     Player::Player(PlayerPosition p) : position { p } {};
     Player::Player(int p)  { playerID = p; };
     Player::Player(int pos, int pID) { position = static_cast<PlayerPosition>(pos); playerID = pID; }
 
-    PlayerMove Player::makeAIMove(std::shared_ptr<Table> info) {
+    PlayerMove CallAI::makeMove(std::shared_ptr<Table> info) {
+        return Player::makeMove(info);
+    }   
+    PlayerMove Player::makeMove(std::shared_ptr<Table> info) {
+        // Default behavior: Always call
+        auto clamp = [](int a, int b, int c) -> int { if(a<b) a=b; if(a>c) a=c; return a;};
+        
+        PlayerMove myMove;
+        myMove.move = Move::MOVE_CALL;
+        myMove.bet_amount = info->minimumBet;
+        myMove.bet_amount = clamp(myMove.bet_amount, 0, this->bankroll);
+        if( myMove.bet_amount == this->bankroll) myMove.move = Move::MOVE_ALLIN;
+        return myMove;
+    }
+
+    PlayerMove RandomMoveAI::makeMove(std::shared_ptr<Table> info) {
         // Performs a random valid move
         auto clamp = [](int a, int b, int c) -> int { if(a<b) a=b; if(a>c) a=c; return a;};
         
@@ -51,7 +65,7 @@ namespace Poker{
             {Move::MOVE_ALLIN, "is all in "},
             {Move::MOVE_UNDEF, "undef!!!!!!"}
         };
-        std::cout << "Player " << player.playerID << " " << PlayerPosition_to_String[player.position] << ": ";
+        std::cout << "Player " << player.playerID << " (" << PlayerPosition_to_String[player.position] << ") "  << ": ";
         std::cout << pastTenseMap[move] << pmove.bet_amount << " (prev. bank: " << player.bankroll << ")" << std::endl;
     }
 

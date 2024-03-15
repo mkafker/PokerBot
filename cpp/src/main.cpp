@@ -35,15 +35,13 @@ int main() {
 
     //FullHandRank fun = Hand::calcFullHandRank(&straightflush);
     //std::cout << fun.handrank << " " << fun.maincards << "| " << fun.kickers << std::endl;
-    //Game mygame;
-    //mygame.doGame();
-    //benchmarkRounds();
-    //
-    std::vector<Card> myCards  = { Card(Rank::C_A, Suit::CLUB), Card(Rank::C_K, Suit::CLUB) };
-    std::vector<Card> theirCards  = { Card(Rank::C_A, Suit::DIAMOND), Card(Rank::C_K, Suit::SPADE) };
+
+    std::vector<Card> myCards  = { Card(Rank::C_7, Suit::CLUB), Card(Rank::C_8, Suit::CLUB) };
+    std::vector<Card> theirCards  = { Card(Rank::C_5, Suit::DIAMOND), Card(Rank::C_J, Suit::SPADE) };
     //monteCarloHandRankCompare( myCards, theirCards, 0.01 );
-    monteCarloHandRankCompare( myCards, theirCards, (uint64_t)1000000);
-    benchmarkRounds();
+    //monteCarloHandRankCompare( myCards, theirCards, (uint64_t)1000000);
+    //benchmarkRounds(100000);
+    benchmarkGames(10000);
 
     return 0;
 }
