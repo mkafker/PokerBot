@@ -5,7 +5,16 @@ import math
 import numpy as np
 import re
 
-_MAX_BET = 5 # Includes the antee of $1
+'''
+This code treats a more complete version of heads-up poker (2 cards per player, multiple
+community cards, etc). It also uses monte-carlo at the starting chance node (picks a random)
+opponent card, to implement a version of MC-CFR. Finally I have changed how the regret_sum
+gets calculated to be in line with CFR+. This makes a trade of by keeping potentially winning
+strategies closer to the top, but with the disadvantage of time wasted exploring loosing strategies.
+'''
+
+
+_MAX_BET = 3 # Includes the antee
 
 class Card:
     SUIT_TO_STRING = {
@@ -119,6 +128,7 @@ def main():
     display_results(expected_game_value, i_map)
 
 def mccfr(i_map, start_from, infoset_key=";;;", deck = Deck(4, 2), opponent_cards=((-1,-1), (-1,-1)), pr_1=1, pr_2=1, pr_c=1):
+
     """
     Counterfactual regret minimization algorithm.
 
@@ -168,11 +178,11 @@ def mccfr(i_map, start_from, infoset_key=";;;", deck = Deck(4, 2), opponent_card
     action_history = infoset_key.split(";")[-1].split('/')
     final_history = action_history[-1]
     
-    if len(extract_actions(final_history)) % 2 == 0 and player_id == "P2":
+    if len(final_history) % 2 == 0 and player_id == "P2":
         print("ERROR")
         print(infoset_key)
         quit()
-    if len(extract_actions(final_history)) % 2 == 1 and player_id == "P1":
+    if len(final_history) % 2 == 1 and player_id == "P1":
         print("ERROR")
         print(infoset_key)
         quit()
@@ -342,57 +352,6 @@ def get_info_set(i_map, infoset_key):
     return i_map[infoset_key]
 
 
-def extract_actions(single_history):
-    """
-    Takes a single string of history (no /) and 
-    returns a list of actions in a form such as
-    ['c', '1r', '10r', 'f']
-    """
-    actions = []
-    current_action = ''
-    for item in single_history:
-        if item in ['a', 'c', 'f']:
-            actions.append(item)
-            current_action = ''
-        elif item.isdigit():
-            current_action += item
-        elif item == 'r':
-            actions.append(current_action + item)
-            current_action = ''
-    return actions
-            
-
-def player_money_bet(action_history):
-    """
-    Returns the amount of money p1 and p2 have bet
-    (not including the antee) with the format of p1, p2.
-    Assumes that player 1 always moves first for each betting round.
-    """
-    p1_commited = 0
-    p2_commited = 0
-    for history in action_history:
-        p1_temp = 0
-        p2_temp = 0
-        for key, action in enumerate(extract_actions(history)):
-            if key % 2 == 0:
-                if action == 'c':
-                    p1_temp = p2_temp
-                elif 'r' in action:
-                    p1_temp += int(action.replace('r', ''))
-                elif action == 'a':
-                    p1_temp += 1
-            else:
-                if action == 'c':
-                    p2_temp = p1_temp
-                elif 'r' in action:
-                    p2_temp += int(action.replace('r', ''))
-                elif action == 'a':
-                    p2_temp += 1
-        p1_commited += p1_temp
-        p2_commited += p2_temp
-    
-    return p1_commited, p2_commited
-
 def valid_actions(infoset_key, max_bet):
     """
     Returns a list of valid actions based off the tree history.
@@ -410,14 +369,23 @@ def valid_actions(infoset_key, max_bet):
     if player_id == "P1":
         if p2_commited > p1_commited: # Being raised against
             actions = ['f'] + actions
-        for bet_amount in range(1, max_bet + 1 - p1_commited):
-            actions.append(str(bet_amount) + 'r')
-
+            if p2_commited == p1_commited + 1 and p1_commited == max_bet - 2:
+                actions.append('R')
+        elif p1_commited == max_bet - 1:
+            actions.append('r')
+        elif p1_commited == max_bet - 2:
+            actions.append('r')
+            actions.append('R')
     if player_id == "P2":
         if p1_commited > p2_commited: # Being raised against
             actions = ['f'] + actions
-        for bet_amount in range(1, max_bet + 1 - p2_commited):
-            actions.append(str(bet_amount) + 'r')
+            if p1_commited == p2_commited + 1 and p2_commited == max_bet - 2:
+                actions.append('R')
+        elif p2_commited == max_bet - 1:
+            actions.append('r')
+        elif p2_commited == max_bet - 2:
+            actions.append('r')
+            actions.append('R')
 
     return actions
 
@@ -510,6 +478,41 @@ def is_terminal_node(infoset_key, betting_rounds, max_bet):
                 if final_moves in ['cc', 'rc', 'Rc']:
                     return True
     return False
+
+def player_money_bet(action_history):
+    """
+    Returns the amount of money p1 and p2 have bet
+    (not including the antee) with the format of p1, p2.
+    Assumes that player 1 always moves first for each betting round.
+    """
+    p1_commited = 0
+    p2_commited = 0
+    for history in action_history:
+        p1_temp = 0
+        p2_temp = 0
+        for key, action in enumerate(history):
+            if key % 2 == 0:
+                if action == 'c':
+                    p1_temp = p2_temp
+                elif action == 'r':
+                    p1_temp += 1
+                elif action == 'R':
+                    p1_temp += 2
+                elif action == 'a':
+                    p1_temp += 1
+            else:
+                if action == 'c':
+                    p2_temp = p1_temp
+                elif action == 'r':
+                    p2_temp += 1
+                elif action == 'R':
+                    p2_temp += 2
+                elif action == 'a':
+                    p2_temp += 1
+        p1_commited += p1_temp
+        p2_commited += p2_temp
+    
+    return p1_commited, p2_commited
 
 def terminal_util(infoset_key, p1_cards, p2_cards, player_id):
     """
