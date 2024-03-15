@@ -24,10 +24,8 @@ namespace Poker {
             int                 smallBlind          = 5;
             int                 pot                 = 0;
             int                 minimumBet          = 0;
-            Table() = default;
-            Table(const Table& t) = default;
             shared_ptr<Deck>   getDeck();
-
+            void populatePlayerListDefaults(const string& s, const int& n);
             void resetDeck(random_device &rd);
             void dealCommunityCards(int );
             void dealPlayersCards(const std::vector<shared_ptr<Player>>);

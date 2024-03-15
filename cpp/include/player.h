@@ -128,13 +128,13 @@ namespace Poker{
             virtual PlayerMove makeMove(std::shared_ptr<Table> info);
     };
 
-    class RandomMoveAI : public Player {
+    class RandomAI : public Player {
         public:
             // inherit the constructors from the Player class
             using Player::Player;
             PlayerMove makeMove(std::shared_ptr<Table> info) override;
     };
-    class CallAI : public Player {
+    class SingleMoveCallAI : public Player {
         public:
             using Player::Player;
             PlayerMove makeMove(std::shared_ptr<Table> info) override;

@@ -28,6 +28,7 @@ namespace Poker {
             Game () {
                 reset();
             }
+            Game(const Table& t) { table = t; }
             void reset(int n = 6) {
                 // generate new RNG and fresh deck (unshuffled)
                 table.resetDeck(gameRD);
@@ -35,17 +36,7 @@ namespace Poker {
                 table.shuffleDeck();
                 // clear community cards
                 table.communityCards.clear();
-                // create players
-                std::vector<PlayerPosition> playerPositionList = numPlayersToPositionList(n);
-                table.playerList.clear();
-                for(int i = 0; i < n; i++ ) {
-                    RandomMoveAI p;
-                    p.setPosition(playerPositionList[i]);
-                    p.bankroll = 100;
-                    p.playerID = i;
-                    // FUN FACT: emplacing back derived classes ACTUALLy emplaces back the base class! Very cool!
-                    table.playerList.emplace_back(make_shared<RandomMoveAI>(p));
-                }
+                table.populatePlayerListDefaults("random", n);
                 // set blinds and bet amounts
                 table.bigBlind     = 10;
                 table.smallBlind   = 5;
@@ -62,23 +53,38 @@ namespace Poker {
                 lastRoundWinner = nullptr;
             }
 
-
-
             void doGame() {
                 // Call reset() before this function
-                std::vector<shared_ptr<Player>> activePlayers = table.getPlayersInOrder();
- 
-               while( bettingPlayers.size() > 1 ) {
+                bettingPlayers = activePlayers;
+                auto nPlayers = bettingPlayers.size();
+                for_each(bettingPlayers.begin(), bettingPlayers.end(), [] (shared_ptr<Player>& P) {
+                    P->bankroll = 100;
+                });
+                while( nPlayers > 1) {
                     table.resetDeck(gameRD);
                     table.shuffleDeck();
-                    std::vector<PlayerPosition> playerPositionList = numPlayersToPositionList(bettingPlayers.size());
-                    for(int i = 0; i < bettingPlayers.size(); i++ ) {
+                    bettingPlayers.clear();
+                    copy_if(activePlayers.begin(), activePlayers.end(), back_inserter(bettingPlayers), [] (shared_ptr<Player> P) { return P->bankroll > 0; });
+                    nPlayers = bettingPlayers.size();
+                    std::vector<PlayerPosition> playerPositionList = numPlayersToPositionList(nPlayers);
+                    for(int i = 0; i < nPlayers; i++ ) {
                         bettingPlayers[i]->setPosition(playerPositionList[i]);
                     }
 
-                    doRound();
+                    doRound();  
+                    bettingPlayers.clear();
+                    copy_if(activePlayers.begin(), activePlayers.end(), back_inserter(bettingPlayers), [] (shared_ptr<Player> P) { return P->bankroll > 0; });
 
                     // rotate players to the next seat
+                    nPlayers = bettingPlayers.size();
+                    if( nPlayers > 1) {
+                        playerPositionList = numPlayersToPositionList(nPlayers);
+                        for_each(table.playerList.begin(), table.playerList.end(), [&] (shared_ptr<Player> P) {
+                            int newPos = static_cast<int>(P->getPosition());
+                            newPos = (newPos - 1) % nPlayers;
+                            P->setPosition(static_cast<PlayerPosition>(newPos));
+                        } );
+                    }
                 }
 
                 #if PRINT
@@ -107,6 +113,7 @@ namespace Poker {
                 allInPlayers.clear();
                 foldedPlayers.clear();
                 bettingPlayers = table.getPlayersInOrder(bettingPlayers);
+                const auto bPlayersBackup = bettingPlayers;
 
                 std::shared_ptr<Player> winningPlayer;
                 table.resetPlayerHands();
@@ -214,6 +221,8 @@ namespace Poker {
                 showdownPlayers.insert(showdownPlayers.end(), allInPlayers.cbegin(), allInPlayers.cend());
 
                 winningPlayer = determineWinner(showdownPlayers);
+                // repair the damage we've done to bettingPlayers
+                bettingPlayers = bPlayersBackup;
 
                 if( winningPlayer ) {
                     // finally, reward player
@@ -229,6 +238,7 @@ namespace Poker {
                     std::cout << "Draw, returning bets!" << std::endl;
                     #endif
                     // else, draw
+                    lastRoundWinner = nullptr;
                     for( shared_ptr<Player> P : showdownPlayers ) {
                         P->bankroll += P->move.bet_amount;
                     }

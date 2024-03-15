@@ -6,7 +6,7 @@ namespace Poker{
     Player::Player(int p)  { playerID = p; };
     Player::Player(int pos, int pID) { position = static_cast<PlayerPosition>(pos); playerID = pID; }
 
-    PlayerMove CallAI::makeMove(std::shared_ptr<Table> info) {
+    PlayerMove SingleMoveCallAI::makeMove(std::shared_ptr<Table> info) {
         return Player::makeMove(info);
     }   
     PlayerMove Player::makeMove(std::shared_ptr<Table> info) {
@@ -21,7 +21,7 @@ namespace Poker{
         return myMove;
     }
 
-    PlayerMove RandomMoveAI::makeMove(std::shared_ptr<Table> info) {
+    PlayerMove RandomAI::makeMove(std::shared_ptr<Table> info) {
         // Performs a random valid move
         auto clamp = [](int a, int b, int c) -> int { if(a<b) a=b; if(a>c) a=c; return a;};
         

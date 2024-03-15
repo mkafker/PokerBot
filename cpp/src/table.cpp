@@ -24,7 +24,24 @@ namespace Poker {
                     p->hand.emplace_back(deck.pop_card());
                 }
             }
-
+            void Table::populatePlayerListDefaults(const string& s, const int& n) {
+                // populates this Table's player list with n players of AI type s
+                std::vector<PlayerPosition> playerPositionList = numPlayersToPositionList(n);
+                this->playerList.clear();
+                for(int i = 0; i < n; i++ ) {
+                    shared_ptr<Player> guyToMake;
+                    if (s == "random") 
+                            guyToMake = make_shared<RandomAI>();
+                    else if (s == "call")
+                            guyToMake = make_shared<SingleMoveCallAI>();
+                    else    guyToMake = make_shared<Player>();
+                    guyToMake->setPosition(playerPositionList[i]);
+                    guyToMake->bankroll = 100;
+                    guyToMake->playerID = i;
+                    // FUN FACT: emplacing back derived classes ACTUALLy emplaces back the base class! Very cool!
+                    this->playerList.emplace_back(guyToMake);
+                }
+            }
 
             std::vector<shared_ptr<Player>> Table::getPlayersInOrder(std::vector<shared_ptr<Player>> pvector) {
                 // returns a vector of pointers to players in the correct (game) order
