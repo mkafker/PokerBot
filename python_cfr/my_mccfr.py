@@ -61,9 +61,9 @@ class Card:
 
 class Deck:
     def __init__(self, ranks, suits):
-        self.cards = self.build_deck(suits, ranks)
+        self.cards = self.build_deck(ranks, suits)
 
-    def build_deck(self, suits, ranks):
+    def build_deck(self, ranks, suits):
         return {(rank, suit) for rank, suit in itertools.product([2+x for x in range(ranks)], [1+x for x in range(suits)])}
 
     def shuffle(self):
@@ -166,13 +166,13 @@ def mccfr(i_map, start_from, infoset_key=";;;", deck = Deck(4, 2), opponent_card
     o_cards = opponent_cards
     co_cards = parse_community_cards(infoset_key) # community cards
     action_history = infoset_key.split(";")[-1].split('/')
-    final_history = action_history[-1]
+    final_history = extract_actions(action_history[-1])
     
-    if len(extract_actions(final_history)) % 2 == 0 and player_id == "P2":
+    if len(final_history) % 2 == 0 and player_id == "P2":
         print("ERROR")
         print(infoset_key)
         quit()
-    if len(extract_actions(final_history)) % 2 == 1 and player_id == "P1":
+    if len(final_history) % 2 == 1 and player_id == "P1":
         print("ERROR")
         print(infoset_key)
         quit()
@@ -341,6 +341,31 @@ def get_info_set(i_map, infoset_key):
 
     return i_map[infoset_key]
 
+def sort_cards(cards):
+    """
+    Returns a tuple of sorted cards based on the rank first and then suit. See
+    the cards class for numbers associated with these two. Sorted from low to 
+    high
+    """
+    sorted_cards = sorted(list(cards), key=lambda x: (x.rank, x.suit))
+    return tuple(sorted_cards)
+
+def estimate_hand_strength(nb_simulation, player_cards, deck):
+    simulation_results = []
+    for i in range(nb_simulation):
+        opponents_cards, new_deck = deck.draw_random_cards(2)
+        community_cards, final_deck = new_deck.draw_random_cards(5)
+        dummy_history = ['cc']
+        winner = evaluate_winner(player_cards, opponents_cards, community_cards, dummy_history)
+
+        if winner == 1: #player wins
+            result = 1
+        else:
+            result = 0
+
+        simulation_results.append(result)
+    average_win_rate = 1.0 * sum(simulation_results) / len(simulation_results)
+    return average_win_rate
 
 def extract_actions(single_history):
     """
@@ -361,7 +386,6 @@ def extract_actions(single_history):
             current_action = ''
     return actions
             
-
 def player_money_bet(action_history):
     """
     Returns the amount of money p1 and p2 have bet
@@ -430,10 +454,10 @@ def is_chance_node(infoset_key, betting_rounds):
     if len(action_history) == 1 and len(action_history[0]) == 0:
         return True
     if len(action_history) < betting_rounds + 1: # Not in final betting round
-        final_history = action_history[-1]
+        final_history = extract_actions(action_history[-1])
         if len(final_history) > 1: 
             final_moves = final_history[-2:] # Both players have taken at least one action
-            if final_moves in ['aa', 'cc', 'rc']:
+            if final_moves[-1] in ['a', 'c']:
                 return True
     return False
 
@@ -445,10 +469,14 @@ def chance_util(i_map, start_from, infoset_key, deck, opponent_cards, pr_1, pr_2
     if len(action_history) == 1 and len(action_history[0]) == 0: # Initializing
         expected_value = 0
         n_possibilities = math.comb(len(deck.cards), 4) * math.comb(4, 2)
+
+        p1_cards, new_deck = deal
+        p2_cards, final_deck = new_deck.draw_random_cards(2)
+        p1_cards = sorted_cards(p1_cards)
+        p2_cards = sorted_cards(p2_cards)
+
         if start_from == "P1":
             for deal in deck.draw_combinations(2):
-                p1_cards, new_deck = deal
-                p2_cards, final_deck = new_deck.draw_random_cards(2)
                 infoset_key = f'P1;{p1_cards[0]}/{p1_cards[1]};;aa/'
                 opponent_cards = p2_cards
                 expected_value += mccfr(i_map, start_from, infoset_key, final_deck, opponent_cards,
@@ -456,8 +484,6 @@ def chance_util(i_map, start_from, infoset_key, deck, opponent_cards, pr_1, pr_2
 
         else:
             for deal in deck.draw_combinations(2):
-                p1_cards, new_deck = deal
-                p2_cards, final_deck = new_deck.draw_random_cards(2)
                 infoset_key = f'P2;{p2_cards[0]}/{p2_cards[1]};;aa/'
                 opponent_cards = p1_cards
 
@@ -472,13 +498,26 @@ def chance_util(i_map, start_from, infoset_key, deck, opponent_cards, pr_1, pr_2
 
         return expected_value / n_possibilities
     
-    if len(action_history) == 2: # Finished first betting round
+    if len(action_history) > 1:
         expected_value = 0
-        n_possibilities = math.comb(len(deck.cards), 1)
         
-        for deal in deck.draw_combinations(1):
+        if len(action_history) == 2:
+            cards_to_draw = 3
+        else:
+            cards_to_draw = 1
+
+        n_possibilities = math.comb(len(deck.cards), cards_to_draw)
+
+        for deal in deck.draw_combinations(cards_to_draw):
             co_cards, new_deck = deal
+            co_cards = sort_cards(co_cards)
+
             new_infoset_key = infoset_key.split(";")
+
+            co_cards = ["/".join([str(x) for x in co_cards])]
+            if new_infoset_key[2]: # Already have some co_cards
+                co_cards = [new_infoset_key[2] + "/" + co_cards[0]]
+
             new_infoset_key = new_infoset_key[0:2] + ["/".join([str(x) for x in co_cards])] + [new_infoset_key[-1]]
             new_infoset_key = ';'.join(new_infoset_key) + "/"
 
@@ -499,16 +538,14 @@ def is_terminal_node(infoset_key, betting_rounds, max_bet):
             if p1_commited == max_bet and p2_commited == max_bet:
                 return True # Players have all in before the final round
         
-        final_history = action_history[-1] # Only look at the latest round
+        final_history = extract_actions(action_history[-1]) # Only look at the latest round
         if len(final_history) > 0 and 'f' == final_history[-1]:
             return True # A player folded
         if len(final_history) > 1:
             final_moves = final_history[-2:] # Both players have taken at least one action
-            if final_moves in ['Rc']:
+            if final_moves[-1] == 'c':
                 return True
-            if len(action_history) == betting_rounds + 1:
-                if final_moves in ['cc', 'rc', 'Rc']:
-                    return True
+            
     return False
 
 def terminal_util(infoset_key, p1_cards, p2_cards, player_id):
@@ -539,17 +576,12 @@ def terminal_util(infoset_key, p1_cards, p2_cards, player_id):
 
 def evaluate_winner(cards_1, cards_2, community_cards, history):
     """
-    This function returns 1, 2, or -1 for player winning,
-    opponent winning, or a tie. 
-    
-    For this modified version of Kuhn
-    poker (J, Q, K, A), it just requires comparing the cards of each
-    player and the winner is the one with the higher card. There are
-    no ties.
+    This function returns 1, 0, or -1 for player winning,
+    tieing, or losing.
     """
     
     # Check for folding
-    final_history = history[-1]
+    final_history = extract_actions(history[-1])
     if len(final_history) > 0 and final_history[-1] == 'f':
         if len(final_history) % 2 == 0:
             return 1
