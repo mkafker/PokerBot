@@ -40,8 +40,9 @@ int main() {
     std::vector<Card> theirCards  = { Card(Rank::C_5, Suit::DIAMOND), Card(Rank::C_J, Suit::SPADE) };
     //monteCarloHandRankCompare( myCards, theirCards, 0.01 );
     //monteCarloHandRankCompare( myCards, theirCards, (uint64_t)1000000);
-    //benchmarkRounds(100000);
-    benchmarkGames(10000);
+    //benchmarkRounds(10000);
+    //benchmarkGames(10000);
+    monteCarloGameStateCompare();
 
     return 0;
 }

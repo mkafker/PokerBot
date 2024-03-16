@@ -24,22 +24,23 @@ namespace Poker {
                     p->hand.emplace_back(deck.pop_card());
                 }
             }
-            void Table::populatePlayerListDefaults(const string& s, const int& n) {
-                // populates this Table's player list with n players of AI type s
-                std::vector<PlayerPosition> playerPositionList = numPlayersToPositionList(n);
+            void Table::setPlayerList(const vector<string> sVec) {
+                std::vector<PlayerPosition> playerPositionList = numPlayersToPositionList(sVec.size());
                 this->playerList.clear();
-                for(int i = 0; i < n; i++ ) {
-                    shared_ptr<Player> guyToMake;
+                for(auto it = sVec.begin(); it != sVec.end(); it++) {
+                    auto s = *it;
+                    auto n = distance(sVec.begin(), it);
+                    shared_ptr<Player> guy;
                     if (s == "random") 
-                            guyToMake = make_shared<RandomAI>();
+                            guy = make_shared<RandomAI>();
                     else if (s == "call")
-                            guyToMake = make_shared<SingleMoveCallAI>();
-                    else    guyToMake = make_shared<Player>();
-                    guyToMake->setPosition(playerPositionList[i]);
-                    guyToMake->bankroll = 100;
-                    guyToMake->playerID = i;
-                    // FUN FACT: emplacing back derived classes ACTUALLy emplaces back the base class! Very cool!
-                    this->playerList.emplace_back(guyToMake);
+                            guy = make_shared<SingleMoveCallAI>();
+                    else if (s == "sequence")
+                            guy = make_shared<SequenceMoveAI>();
+                    else    guy = make_shared<Player>();
+                    guy->setPosition(playerPositionList[n]);
+                    guy->playerID = n;
+                    this->playerList.emplace_back(guy);
                 }
             }
 
@@ -63,10 +64,29 @@ namespace Poker {
                     P->resetHand();
                 }
             }
+            void Table::resetPlayerBankrolls(int n) {
+                // Sets everybodies wallets to n
+                for(auto P : this->playerList) {
+                    P->bankroll = n;
+                }
+            }
 
             void Table::shuffleDeck() {
                 // Make sure deck has it's mersenne twister primed before calling this or you got a one-way ticket to segfault city
                 this->deck.shuffle();
+            }
+
+            void Table::reset(random_device& rd) {
+                // Gets fresh deck, 
+                this->resetDeck(rd);
+                // shuffle cards
+                this->shuffleDeck();
+                // clear community cards
+                this->communityCards.clear();
+                this->street       = 0;
+                this->pot          = 0;
+                this->resetPlayerHands();
+                this->resetPlayerBankrolls();
             }
 
 

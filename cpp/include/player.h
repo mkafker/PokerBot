@@ -121,7 +121,6 @@ namespace Poker{
             const PlayerPosition& getPosition() const { return this->position; };
             void setPosition(const int& pos) { this->position = static_cast<PlayerPosition>(pos); }
             void setPosition(const PlayerPosition &p) { this->position = p; }
-            void incPosition();
             void resetHand();
             inline bool isBankrupt();
             // Virtual functions to be overridden by Player implementations
@@ -136,6 +135,14 @@ namespace Poker{
     };
     class SingleMoveCallAI : public Player {
         public:
+            using Player::Player;
+            PlayerMove makeMove(std::shared_ptr<Table> info) override;
+    };
+    class SequenceMoveAI : public Player {
+        // Player instance that follows a sequence of moves
+        public:
+            std::vector<PlayerMove> moveList;
+            std::vector<PlayerMove>::iterator moveListIterator = moveList.begin();
             using Player::Player;
             PlayerMove makeMove(std::shared_ptr<Table> info) override;
     };

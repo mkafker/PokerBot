@@ -50,10 +50,21 @@ namespace Poker{
         if( myMove.bet_amount == this->bankroll) myMove.move = Move::MOVE_ALLIN;
         return myMove;
     }
-
-    void Player::incPosition() {
-        // TODO: rework
-        this->position = static_cast<PlayerPosition>(static_cast<int>(this->position) + 1 % 6 ) ;
+    PlayerMove SequenceMoveAI::makeMove(std::shared_ptr<Table> info) {
+        // Performs a list of moves
+        // If it reaches the end of its move sequence, repeats the last one
+        auto clamp = [](int a, int b, int c) -> int { if(a<b) a=b; if(a>c) a=c; return a;};
+        
+        PlayerMove myMove = *moveListIterator;
+        if( moveListIterator != moveList.end()) 
+            moveListIterator++;
+        // sanitize the move... unnecessary?
+        if( myMove.move == Move::MOVE_FOLD) myMove.bet_amount = 0;
+        if( myMove.move == Move::MOVE_CALL) myMove.bet_amount = info->minimumBet;
+        if( myMove.move == Move::MOVE_ALLIN) myMove.bet_amount = this->bankroll;
+        myMove.bet_amount = clamp(myMove.bet_amount, 0, this->bankroll);
+        if( myMove.bet_amount == this->bankroll) myMove.move = Move::MOVE_ALLIN;
+        return myMove;
     }
 
     void printPlayerMove(const Player& player, const PlayerMove& pmove) {
@@ -66,7 +77,7 @@ namespace Poker{
             {Move::MOVE_UNDEF, "undef!!!!!!"}
         };
         std::cout << "Player " << player.playerID << " (" << PlayerPosition_to_String[player.position] << ") "  << ": ";
-        std::cout << pastTenseMap[move] << pmove.bet_amount << " (prev. bank: " << player.bankroll << ")" << std::endl;
+        std::cout << pastTenseMap[move] << pmove.bet_amount << " (bank: " << player.bankroll << ")" << std::endl;
     }
 
     inline bool Player::isBankrupt() { return this->bankroll <= 0; }

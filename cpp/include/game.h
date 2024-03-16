@@ -4,7 +4,7 @@
 #include <iostream>
 #include "table.h"
 #include "player.h"
-#define PRINT false
+#define PRINT true
 using namespace std;
 
 namespace Poker {
@@ -18,31 +18,30 @@ namespace Poker {
             vector<shared_ptr<Player>> bettingPlayers;
             shared_ptr<Player> lastRoundWinner;
 
-            // TODO: Make a new data structure to hold AI strategies
-            // Have it be an input to a copy constructor for the Game
-            // This copy must be able to be made mid-round or at any stage of the game
 
 
-            // Betting players = activePlayers - foldedPlayers - allInPlayers
-            // This could be done in an inline function or something?
-            Game () {
-                reset();
-            }
+            Game() { }
             Game(const Table& t) { table = t; }
-            void reset(int n = 6) {
-                // generate new RNG and fresh deck (unshuffled)
-                table.resetDeck(gameRD);
-                // shuffle cards
-                table.shuffleDeck();
-                // clear community cards
-                table.communityCards.clear();
-                table.populatePlayerListDefaults("random", n);
+            void reset() {
+                table.street       = 0;
+                table.pot          = 0;
+                table.reset(gameRD);
+                activePlayers = table.getPlayersInOrder();
+                bettingPlayers = activePlayers;
+                allInPlayers.clear();
+                foldedPlayers.clear();
+                lastRoundWinner = nullptr;
+                table.resetPlayerBankrolls(100);
+            }
+            void resetToDefaults(int n = 6) {
+                // creates a fresh game of standard 6 player poker
+                const vector<string> aiList (n, "random");
+                table.setPlayerList(aiList);
                 // set blinds and bet amounts
                 table.bigBlind     = 10;
                 table.smallBlind   = 5;
-                table.street       = 0;
-                table.pot          = 0;
-
+                table.reset(gameRD);
+                table.resetPlayerBankrolls(100);
                 // set all players to active and betting
                 activePlayers = table.getPlayersInOrder();
                 bettingPlayers = activePlayers;
@@ -54,7 +53,7 @@ namespace Poker {
             }
 
             void doGame() {
-                // Call reset() before this function
+                // This function assumes a set up game (reset() variant called)
                 bettingPlayers = activePlayers;
                 auto nPlayers = bettingPlayers.size();
                 for_each(bettingPlayers.begin(), bettingPlayers.end(), [] (shared_ptr<Player>& P) {
@@ -63,14 +62,8 @@ namespace Poker {
                 while( nPlayers > 1) {
                     table.resetDeck(gameRD);
                     table.shuffleDeck();
-                    bettingPlayers.clear();
-                    copy_if(activePlayers.begin(), activePlayers.end(), back_inserter(bettingPlayers), [] (shared_ptr<Player> P) { return P->bankroll > 0; });
                     nPlayers = bettingPlayers.size();
                     std::vector<PlayerPosition> playerPositionList = numPlayersToPositionList(nPlayers);
-                    for(int i = 0; i < nPlayers; i++ ) {
-                        bettingPlayers[i]->setPosition(playerPositionList[i]);
-                    }
-
                     doRound();  
                     bettingPlayers.clear();
                     copy_if(activePlayers.begin(), activePlayers.end(), back_inserter(bettingPlayers), [] (shared_ptr<Player> P) { return P->bankroll > 0; });
@@ -110,6 +103,14 @@ namespace Poker {
                     lastRoundWinner = bettingPlayers[0];
                     return;
                 };
+
+                bettingPlayers.clear();
+                copy_if(activePlayers.begin(), activePlayers.end(), back_inserter(bettingPlayers), [] (shared_ptr<Player> P) { return P->bankroll > 0; });
+                auto nPlayers = bettingPlayers.size();
+                std::vector<PlayerPosition> playerPositionList = numPlayersToPositionList(nPlayers);
+                for(int i = 0; i < nPlayers; i++ ) {
+                    bettingPlayers[i]->setPosition(playerPositionList[i]);
+                }
                 allInPlayers.clear();
                 foldedPlayers.clear();
                 bettingPlayers = table.getPlayersInOrder(bettingPlayers);
@@ -299,13 +300,6 @@ namespace Poker {
                 }
             }
             
-            
-
-            void rotatePlayers() {
-                for(auto &P : table.playerList) {
-                    P->incPosition();
-                }
-            }
             void print() {
                 for( shared_ptr<Player> p : table.playerList ) {
                     std::cout << std::endl;

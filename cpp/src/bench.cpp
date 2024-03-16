@@ -44,14 +44,14 @@ namespace Poker {
   }
   void benchmarkRounds(uint64_t N) {
       auto start = std::chrono::steady_clock::now();
-      auto game1 = std::make_shared<Game>();
-      game1->doRound();
-      std::shared_ptr<Player> bestPlayer = game1->lastRoundWinner;
+      std::shared_ptr<Player> bestPlayer;
       int iT = 0;
+      auto game = std::make_shared<Game>();
       for(int iN = 0; iN < N; iN++) {
-          auto game = std::make_shared<Game>();
+          game->resetToDefaults();
           game->doRound();
           std::shared_ptr<Player> winningPlayer = game->lastRoundWinner;
+          if( iN == 0 ) bestPlayer = winningPlayer;
           // Skip if there wasn't a winner (everyone folded for some reason)
           if( winningPlayer ) {
             auto winFHR = winningPlayer->FHR;
@@ -69,19 +69,52 @@ namespace Poker {
       std::cout << N << " rounds calculated in " << duration.count() << " seconds, or " << double(N)/duration.count() << " rounds/second" << std::endl;
   }
   void benchmarkGames(uint64_t N) {
+      std::random_device rd;
+      vector<string> aiList = {"call", "random", "random", "random", "call", "random", "call"};
       auto start = std::chrono::steady_clock::now();
       int iT = 0;
+      auto game = std::make_shared<Game>();
       for(int iN = 0; iN < N; iN++) {
-          auto game = std::make_shared<Game>();
-           game->reset();
-           game->doGame();
+            auto table = game->table;
+            table.setPlayerList(aiList);
+            // set blinds 
+            table.bigBlind     = 10;
+            table.smallBlind   = 5;
+            table.reset(rd);
+            // set all players to active and betting
+            game->activePlayers = table.getPlayersInOrder();
+            game->bettingPlayers = game->activePlayers;
+            game->doGame();
       }
 
       std::chrono::duration<double> duration = std::chrono::steady_clock::now() - start;
       std::cout << N << " games calculated in " << duration.count() << " seconds, or " << double(N)/duration.count() << " games/second" << std::endl;
   }
 
-
+void monteCarloGameStateCompare() {
+    std::random_device rd;
+    auto start = chrono::steady_clock::now();
+    int iT = 0;
+    auto game = make_shared<Game>();
+    auto table = game->table;
+    vector<string> aiList = {"call", "random", "random", "random", "call", "random", "call"};
+    // populate player list
+    table.setPlayerList(aiList);
+    table.resetPlayerBankrolls(100);
+    // instantiate game in a specific state
+    game->reset();
+    // do a round to make it interesting
+    game->doRound();
+    // convert our player to a SequenceAI
+    auto firstCallPlayer = table.playerList.at(0);
+    //shared_ptr<Player> firstCallPlayerUpcast = firstCallPlayer;
+    shared_ptr<SequenceMoveAI> newPlayer = dynamic_pointer_cast<SequenceMoveAI>(firstCallPlayer);
+    PlayerMove foldMove;
+    foldMove.move = Move::MOVE_FOLD;
+    foldMove.bet_amount = 0;
+    newPlayer->moveList.emplace_back(foldMove);
+    game->doRound();
+}
 
 
 

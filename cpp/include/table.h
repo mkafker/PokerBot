@@ -25,11 +25,13 @@ namespace Poker {
             int                 pot                 = 0;
             int                 minimumBet          = 0;
             shared_ptr<Deck>   getDeck();
-            void populatePlayerListDefaults(const string& s, const int& n);
+            void setPlayerList(const vector<string> sVec);
+            void reset(random_device& );
             void resetDeck(random_device &rd);
             void dealCommunityCards(int );
             void dealPlayersCards(const std::vector<shared_ptr<Player>>);
             void resetPlayerHands();
+            void resetPlayerBankrolls(int n = 100);
             vector<shared_ptr<Player>> getPlayersInOrder(vector<shared_ptr<Player>> in = vector<shared_ptr<Player>>());
 
             void shuffleDeck();
