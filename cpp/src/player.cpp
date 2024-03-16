@@ -5,23 +5,31 @@ namespace Poker{
     Player::Player(PlayerPosition p) : position { p } {};
     Player::Player(int p)  { playerID = p; };
     Player::Player(int pos, int pID) { position = static_cast<PlayerPosition>(pos); playerID = pID; }
-
-    PlayerMove SingleMoveCallAI::makeMove(std::shared_ptr<Table> info) {
-        return Player::makeMove(info);
-    }   
-    PlayerMove Player::makeMove(std::shared_ptr<Table> info) {
+    
+    PlayerMove Strategy::makeMove(std::shared_ptr<Table> info, const shared_ptr<Player> p) {
         // Default behavior: Always call
         auto clamp = [](int a, int b, int c) -> int { if(a<b) a=b; if(a>c) a=c; return a;};
         
         PlayerMove myMove;
         myMove.move = Move::MOVE_CALL;
         myMove.bet_amount = info->minimumBet;
-        myMove.bet_amount = clamp(myMove.bet_amount, 0, this->bankroll);
-        if( myMove.bet_amount == this->bankroll) myMove.move = Move::MOVE_ALLIN;
+        myMove.bet_amount = clamp(myMove.bet_amount, 0, p->bankroll);
+        if( myMove.bet_amount == p->bankroll) myMove.move = Move::MOVE_ALLIN;
         return myMove;
-    }
+    }   
 
-    PlayerMove RandomAI::makeMove(std::shared_ptr<Table> info) {
+    PlayerMove SingleMoveCallAI::makeMove(std::shared_ptr<Table> info, const shared_ptr<Player> p) {
+        auto clamp = [](int a, int b, int c) -> int { if(a<b) a=b; if(a>c) a=c; return a;};
+        
+        PlayerMove myMove;
+        myMove.move = Move::MOVE_CALL;
+        myMove.bet_amount = info->minimumBet;
+        myMove.bet_amount = clamp(myMove.bet_amount, 0, p->bankroll);
+        if( myMove.bet_amount == p->bankroll) myMove.move = Move::MOVE_ALLIN;
+        return myMove;
+    }   
+
+    PlayerMove RandomAI::makeMove(std::shared_ptr<Table> info, const shared_ptr<Player> p) {
         // Performs a random valid move
         auto clamp = [](int a, int b, int c) -> int { if(a<b) a=b; if(a>c) a=c; return a;};
         
@@ -45,26 +53,32 @@ namespace Poker{
         if( myMove.move == Move::MOVE_FOLD) myMove.bet_amount = 0;
         if( myMove.move == Move::MOVE_CALL) myMove.bet_amount = info->minimumBet;
         if( myMove.move == Move::MOVE_RAISE) myMove.bet_amount = info->minimumBet * 2;
-        if( myMove.move == Move::MOVE_ALLIN) myMove.bet_amount = this->bankroll;
-        myMove.bet_amount = clamp(myMove.bet_amount, 0, this->bankroll);
-        if( myMove.bet_amount == this->bankroll) myMove.move = Move::MOVE_ALLIN;
+        if( myMove.move == Move::MOVE_ALLIN) myMove.bet_amount = p->bankroll;
+        myMove.bet_amount = clamp(myMove.bet_amount, 0, p->bankroll);
+        if( myMove.bet_amount == p->bankroll) myMove.move = Move::MOVE_ALLIN;
         return myMove;
     }
-    PlayerMove SequenceMoveAI::makeMove(std::shared_ptr<Table> info) {
+    PlayerMove SequenceMoveAI::makeMove(std::shared_ptr<Table> info, const shared_ptr<Player> p) {
         // Performs a list of moves
         // If it reaches the end of its move sequence, repeats the last one
         auto clamp = [](int a, int b, int c) -> int { if(a<b) a=b; if(a>c) a=c; return a;};
         
-        PlayerMove myMove = *moveListIterator;
-        if( moveListIterator != moveList.end()) 
-            moveListIterator++;
+        PlayerMove myMove = moveList.at(index);
+        if( index != moveList.size())
+            index++;
         // sanitize the move... unnecessary?
         if( myMove.move == Move::MOVE_FOLD) myMove.bet_amount = 0;
         if( myMove.move == Move::MOVE_CALL) myMove.bet_amount = info->minimumBet;
-        if( myMove.move == Move::MOVE_ALLIN) myMove.bet_amount = this->bankroll;
-        myMove.bet_amount = clamp(myMove.bet_amount, 0, this->bankroll);
-        if( myMove.bet_amount == this->bankroll) myMove.move = Move::MOVE_ALLIN;
+        if( myMove.move == Move::MOVE_ALLIN) myMove.bet_amount = p->bankroll;
+        myMove.bet_amount = clamp(myMove.bet_amount, 0, p->bankroll);
+        if( myMove.bet_amount == p->bankroll) myMove.move = Move::MOVE_ALLIN;
         return myMove;
+    }
+    
+    PlayerMove Player::makeMove(shared_ptr<Table> info) {
+        if ( not strategy ) 
+            strategy = make_unique<Strategy>();
+        return strategy->makeMove(info, make_shared<Player>(*this));
     }
 
     void printPlayerMove(const Player& player, const PlayerMove& pmove) {

@@ -80,9 +80,9 @@ namespace Poker {
             // set blinds 
             table.bigBlind     = 10;
             table.smallBlind   = 5;
-            table.reset(rd);
+            table.resetCards(rd);
             // set all players to active and betting
-            game->activePlayers = table.getPlayersInOrder();
+            game->activePlayers = table.getPlayersInBettingOrder();
             game->bettingPlayers = game->activePlayers;
             game->doGame();
       }
@@ -95,24 +95,34 @@ void monteCarloGameStateCompare() {
     std::random_device rd;
     auto start = chrono::steady_clock::now();
     int iT = 0;
-    auto game = make_shared<Game>();
-    auto table = game->table;
-    vector<string> aiList = {"call", "random", "random", "random", "call", "random", "call"};
+    auto myTable = Table();
     // populate player list
-    table.setPlayerList(aiList);
-    table.resetPlayerBankrolls(100);
+    vector<string> aiList = {"call", "call", "call", "call", "call", "call", "call"};
+    myTable.setPlayerList(aiList);
+    myTable.setPlayerBankrolls(100);
+    myTable.bigBlind = 10;
+    myTable.smallBlind = 5;
+    auto game = make_shared<Game>(myTable);
     // instantiate game in a specific state
-    game->reset();
+    game->setup();
     // do a round to make it interesting
     game->doRound();
     // convert our player to a SequenceAI
-    auto firstCallPlayer = table.playerList.at(0);
-    //shared_ptr<Player> firstCallPlayerUpcast = firstCallPlayer;
-    shared_ptr<SequenceMoveAI> newPlayer = dynamic_pointer_cast<SequenceMoveAI>(firstCallPlayer);
-    PlayerMove foldMove;
-    foldMove.move = Move::MOVE_FOLD;
-    foldMove.bet_amount = 0;
-    newPlayer->moveList.emplace_back(foldMove);
+    auto playerList = myTable.playerList;
+    auto playerOneIt = find_if(playerList.begin(), playerList.end(), [] (const shared_ptr<Player>& p) {return p->playerID == 0; });
+    shared_ptr<Player> playerOne = *playerOneIt;
+
+    auto newStrat = SequenceMoveAI();
+    newStrat.index = 0;
+    PlayerMove pMove;
+    pMove.move = Move::MOVE_FOLD;
+    pMove.bet_amount = 0;
+    newStrat.moveList = vector<PlayerMove>();
+    newStrat.moveList.emplace_back(pMove);
+    playerOne->strategy = make_unique<SequenceMoveAI>(newStrat);
+
+
+    // player 0 should do nothing but fold now
     game->doRound();
 }
 

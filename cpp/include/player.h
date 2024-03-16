@@ -15,8 +15,9 @@ namespace Poker{
         MOVE_ALLIN = 3
     };
     struct PlayerMove {
-        Move move   = Move::MOVE_UNDEF;
-        int bet_amount    = -1;
+        Move move;
+        int bet_amount;
+        PlayerMove() { move = Move::MOVE_UNDEF; bet_amount = -1;}
     };
 
     enum class PlayerPosition : int {
@@ -43,7 +44,7 @@ namespace Poker{
         {PlayerPosition::POS_BTN    , "BTN"}
     };
     static std::vector<PlayerPosition> numPlayersToPositionList (const int n) {
-        // Returns a lits of player positions in betting order
+        // Returns a lits of player positions in BETTING ORDER
         // For two player games, SB is also BTN,
         // but we will just call him the SB
         std::vector<PlayerPosition> ret;
@@ -54,55 +55,80 @@ namespace Poker{
                 ret.emplace_back(PP::POS_BB);
                 break;
             case 3:
+                ret.emplace_back(PP::POS_BTN);
                 ret.emplace_back(PP::POS_SB);
                 ret.emplace_back(PP::POS_BB);
-                ret.emplace_back(PP::POS_BTN);
                 break;
             case 4:
-                ret.emplace_back(PP::POS_SB);
-                ret.emplace_back(PP::POS_BB);
                 ret.emplace_back(PP::POS_UTG);
                 ret.emplace_back(PP::POS_BTN);
-                break;
-            case 5:
                 ret.emplace_back(PP::POS_SB);
                 ret.emplace_back(PP::POS_BB);
+                break;
+            case 5:
                 ret.emplace_back(PP::POS_UTG);
                 ret.emplace_back(PP::POS_CO);
                 ret.emplace_back(PP::POS_BTN);
-                break;
-            case 6:
                 ret.emplace_back(PP::POS_SB);
                 ret.emplace_back(PP::POS_BB);
+                break;
+            case 6:
                 ret.emplace_back(PP::POS_UTG);
                 ret.emplace_back(PP::POS_UTG1);
                 ret.emplace_back(PP::POS_CO);
                 ret.emplace_back(PP::POS_BTN);
-                break;
-            case 7:
                 ret.emplace_back(PP::POS_SB);
                 ret.emplace_back(PP::POS_BB);
+                break;
+            case 7:
                 ret.emplace_back(PP::POS_UTG);
                 ret.emplace_back(PP::POS_UTG1);
                 ret.emplace_back(PP::POS_HJ);
                 ret.emplace_back(PP::POS_CO);
                 ret.emplace_back(PP::POS_BTN);
-                break;
-            case 8:
                 ret.emplace_back(PP::POS_SB);
                 ret.emplace_back(PP::POS_BB);
+                break;
+            case 8:
                 ret.emplace_back(PP::POS_UTG);
                 ret.emplace_back(PP::POS_UTG1);
                 ret.emplace_back(PP::POS_UTG2);
                 ret.emplace_back(PP::POS_HJ);
                 ret.emplace_back(PP::POS_CO);
                 ret.emplace_back(PP::POS_BTN);
+                ret.emplace_back(PP::POS_SB);
+                ret.emplace_back(PP::POS_BB);
                 break;
         }
         return ret;
     };
 
-
+    struct Strategy {
+        public:
+            virtual PlayerMove makeMove(const std::shared_ptr<Table>, const shared_ptr<Player>);
+    };
+    class RandomAI : public Strategy {
+        public:
+            // inherit the constructors from the Strategy class
+            using Strategy::Strategy;
+            PlayerMove makeMove(std::shared_ptr<Table> info, const shared_ptr<Player>) override;
+    };
+    class SingleMoveCallAI : public Strategy {
+        public:
+            using Strategy::Strategy;
+            PlayerMove makeMove(std::shared_ptr<Table> info, const shared_ptr<Player>) override;
+    };
+    class SequenceMoveAI : public Strategy {
+        // Strategy instance that follows a sequence of moves
+        public:
+            std::vector<PlayerMove> moveList;
+            size_t index;
+            SequenceMoveAI() : Strategy()  {
+                index = 0;
+                moveList = vector<PlayerMove>();
+            }
+            PlayerMove makeMove(std::shared_ptr<Table> info, const shared_ptr<Player>) override;
+    };
 
     class Player {
         public:
@@ -112,8 +138,20 @@ namespace Poker{
             PlayerMove  move;
             FullHandRank FHR;
             std::vector<Card> hand;
+            unique_ptr<Strategy> strategy;
             
             Player() = default;
+            Player(const Player& p) {
+                // copy everything but the Strategy
+                bankroll = p.bankroll;
+                playerID = p.playerID;
+                position = p.position;
+                move = p.move;
+                FHR = p.FHR;
+                hand = p.hand;
+            }
+            Player(Player&& p) = default;
+            ~Player() = default;
             Player(int p);
             Player(PlayerPosition p);
             Player(int p, int playerID);
@@ -123,29 +161,9 @@ namespace Poker{
             void setPosition(const PlayerPosition &p) { this->position = p; }
             void resetHand();
             inline bool isBankrupt();
-            // Virtual functions to be overridden by Player implementations
-            virtual PlayerMove makeMove(std::shared_ptr<Table> info);
+            PlayerMove makeMove(shared_ptr<Table> tableInfo);
     };
 
-    class RandomAI : public Player {
-        public:
-            // inherit the constructors from the Player class
-            using Player::Player;
-            PlayerMove makeMove(std::shared_ptr<Table> info) override;
-    };
-    class SingleMoveCallAI : public Player {
-        public:
-            using Player::Player;
-            PlayerMove makeMove(std::shared_ptr<Table> info) override;
-    };
-    class SequenceMoveAI : public Player {
-        // Player instance that follows a sequence of moves
-        public:
-            std::vector<PlayerMove> moveList;
-            std::vector<PlayerMove>::iterator moveListIterator = moveList.begin();
-            using Player::Player;
-            PlayerMove makeMove(std::shared_ptr<Table> info) override;
-    };
     
     void printPlayerMove(const Player& player, const PlayerMove& move);
 
