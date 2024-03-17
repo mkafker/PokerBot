@@ -24,29 +24,26 @@ namespace Poker {
             Game() { }
             Game(const Table& t) { table = t; }
             void setup() {
-                // The table must have its blinds and bankrolls set up before starting the game!
-                table.street       = 0;
-                table.pot          = 0;
+                // The table must have its blinds and bankrolls set up before calling setup
                 table.resetCards(gameRD);
                 activePlayers = table.getPlayersInBettingOrder();
-                bettingPlayers = activePlayers;
                 allInPlayers.clear();
                 foldedPlayers.clear();
                 lastRoundWinner = nullptr;
+                bettingPlayers.clear();
+                copy_if(activePlayers.begin(), activePlayers.end(), back_inserter(bettingPlayers), [] (shared_ptr<Player> P) { return P->bankroll > 0; });
             }
             void resetToDefaults(int n = 6) {
                 // creates a fresh game of standard n player poker
                 const vector<string> aiList (n, "random");
                 table.setPlayerList(aiList);
-                table.street       = 0;
-                table.pot          = 0;
                 table.resetCards(gameRD);
                 activePlayers = table.getPlayersInBettingOrder();
-                bettingPlayers = activePlayers;
                 allInPlayers.clear();
                 foldedPlayers.clear();
                 lastRoundWinner = nullptr;
                 table.setPlayerBankrolls(100);
+                bettingPlayers = activePlayers;
             }
 
             void setNonBRPlayersPositions(int shift = 0) {
@@ -74,13 +71,15 @@ namespace Poker {
                         }
                     }
                 }
-
             }
 
             void doGame() {
                 auto nPlayers = bettingPlayers.size();
                 while( nPlayers > 1) {
                     table.resetCards(gameRD);
+                    // fill bettingPlayers with non-bankrupt players
+                    //bettingPlayers.clear();
+                    //copy_if(activePlayers.begin(), activePlayers.end(), back_inserter(bettingPlayers), [] (const shared_ptr<Player>& P) { return P->bankroll > 0;});
                     doRound();  
                     nPlayers = bettingPlayers.size();
                 }
@@ -103,7 +102,8 @@ namespace Poker {
                 // sets lastRoundWinner to a shared_ptr to the winning player
                 // Modifies bettingPlayers and lastRoundWinner
 
-                // Set everybodies positions
+                // Set everybodies positions and
+                // Fills bettingPlayers with non-bankrupt activePlayers
                 setNonBRPlayersPositions();
                 // If only one player, that's the winner!
                 if( bettingPlayers.size() == 1 ) {
@@ -111,8 +111,6 @@ namespace Poker {
                     return;
                 };
 
-                allInPlayers.clear();
-                foldedPlayers.clear();
                 bettingPlayers = table.getPlayersInBettingOrder(bettingPlayers);
                 const auto bPlayersBackup = bettingPlayers;
 
@@ -126,8 +124,8 @@ namespace Poker {
                 table.dealPlayersCards(bettingPlayers);
 
                 table.street = 0;                      // set to preflop
-                table.minimumBet   = table.bigBlind; 
                 table.pot = 0;
+                table.minimumBet   = table.bigBlind; 
 
                 // process blind bets
                 auto SB = *find_if(bettingPlayers.begin(), bettingPlayers.end(), [](const shared_ptr<Player>& a) { return a->getPosition() == PlayerPosition::POS_SB;});
@@ -144,6 +142,8 @@ namespace Poker {
                     allInPlayers.emplace_back(SB);
                     SB->move.bet_amount = SB->bankroll;
                     SB->move.move = Move::MOVE_ALLIN;
+                    table.pot += SB->move.bet_amount;
+                    SB->bankroll = 0;
                 }
                 if( BB->bankroll > table.bigBlind ) {
                     BB->bankroll -= table.bigBlind;
@@ -156,6 +156,8 @@ namespace Poker {
                     allInPlayers.emplace_back(BB);
                     BB->move.bet_amount = BB->bankroll;
                     BB->move.move = Move::MOVE_ALLIN;
+                    table.pot += BB->move.bet_amount;
+                    BB->bankroll = 0;
                 }
                 // TODO: clean this shit up!!! ^^^^^^
                 while( table.street < 4) {
@@ -222,8 +224,6 @@ namespace Poker {
                 showdownPlayers.insert(showdownPlayers.end(), allInPlayers.cbegin(), allInPlayers.cend());
 
                 winningPlayer = determineWinner(showdownPlayers);
-                // repair the damage we've done to bettingPlayers
-                bettingPlayers = bPlayersBackup;
 
                 if( winningPlayer ) {
                     // finally, reward player
@@ -246,7 +246,10 @@ namespace Poker {
                     }
                 }
 
-                // Rotate player positions
+                allInPlayers.clear();
+                foldedPlayers.clear();
+                // Fill bettingPlayers with non-bankrupt players
+                // also rotate player positions
                 setNonBRPlayersPositions(1);
 
             }

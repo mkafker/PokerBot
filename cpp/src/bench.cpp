@@ -128,14 +128,11 @@ void monteCarloGames(const uint64_t& N, vector<string> aiList) {
     auto myTable = Table();
     // populate player list
     myTable.setPlayerList(aiList);
-    // give everybody a benjamin
-    myTable.setPlayerBankrolls(100);
     // set blind amounts
     myTable.bigBlind = 10;
     myTable.smallBlind = 5;
 
     auto game = std::make_shared<Game>(myTable);
-    game->activePlayers = game->table.getPlayersInBettingOrder(); // activate all players
 
     // setup some statistics
     unordered_map<PlayerPosition, int> posWinCount;
@@ -144,8 +141,8 @@ void monteCarloGames(const uint64_t& N, vector<string> aiList) {
     auto start = std::chrono::steady_clock::now();
     int iT = 0;
     for(int iN = 0; iN < N; iN++) {
+        game->table.setPlayerBankrolls(10);
         game->setup();
-        game->table.setPlayerBankrolls(100);
         game->doGame();
         if( game->lastRoundWinner ) {
             posWinCount[game->lastRoundWinner->position]++;
