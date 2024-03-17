@@ -135,6 +135,8 @@ namespace Poker {
                 if( SB->bankroll > table.smallBlind ) {
                     SB->bankroll -= table.smallBlind;
                     table.pot += table.smallBlind;
+                    SB->move.bet_amount = table.smallBlind;
+                    SB->move.move = Move::MOVE_CALL;
                 } else {
                     // if paying blind bet bankrupts players, force their move
                     bettingPlayers.erase(find(bettingPlayers.begin(), bettingPlayers.end(), SB));
@@ -145,6 +147,8 @@ namespace Poker {
                 if( BB->bankroll > table.bigBlind ) {
                     BB->bankroll -= table.bigBlind;
                     table.pot += table.bigBlind;
+                    BB->move.bet_amount = table.bigBlind;
+                    BB->move.move = Move::MOVE_CALL;
                 } else {
                     // if paying blind bet bankrupts players, force their move
                     bettingPlayers.erase(find(bettingPlayers.begin(), bettingPlayers.end(), BB));
@@ -180,22 +184,18 @@ namespace Poker {
                             Pmove =  P->makeMove(make_shared<Table>(table)) ;
                             table.pot  += Pmove.bet_amount;
                             P->bankroll -= Pmove.bet_amount;
-                            P->move = Pmove;
                             // TODO: Change the entire Move object to be derivable from the bet_amount
 
                             const bool allIn = Pmove.move == Move::MOVE_ALLIN;
-                            const bool allInOrRaise = Pmove.move == Move::MOVE_RAISE || allIn;
                             const bool folded = Pmove.move == Move::MOVE_FOLD;
                             // Set the new minimum bet if player raised
                             table.minimumBet = max(Pmove.bet_amount, table.minimumBet);
-
 
                             #if PRINT
                             printPlayerMove(*P, Pmove);
                             std::cout << "Minimum bet: " << table.minimumBet << std::endl;
                             std::cout << "Current pot: " << table.pot << std::endl;
                             #endif
-
 
                             // remove player from game if folded or all in
                             if( folded ) {
@@ -207,10 +207,10 @@ namespace Poker {
                                 i = bettingPlayers.erase(i);
                             }
                             else {
-                                // Do another round the table only if somebody raised
-                                if( minimumBetBeforeRound != table.minimumBet ) { keepgoing = true; }
                                 i++;
                             }
+                            // Do another round the table only if somebody raised
+                            if( minimumBetBeforeRound != table.minimumBet ) { keepgoing = true; }
                         }
                     }
                     // advance game
@@ -230,6 +230,7 @@ namespace Poker {
                     winningPlayer->bankroll += table.pot;
                     lastRoundWinner = winningPlayer;
                     #if PRINT
+                    // TODO: fix UNDEF_HAND bug
                     std::cout << *lastRoundWinner << " won with a " << lastRoundWinner->FHR << std::endl;
                     #endif
 

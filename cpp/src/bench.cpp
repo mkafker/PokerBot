@@ -97,7 +97,7 @@ void monteCarloGameStateCompare() {
     int iT = 0;
     auto myTable = Table();
     // populate player list
-    vector<string> aiList = {"call", "call", "call", "call", "call", "call", "call"};
+    vector<string> aiList = {"call", "random", "random", "random" };
     myTable.setPlayerList(aiList);
     myTable.setPlayerBankrolls(100);
     myTable.bigBlind = 10;
@@ -110,19 +110,15 @@ void monteCarloGameStateCompare() {
     // convert our player to a SequenceAI
     auto playerList = myTable.playerList;
     auto playerOneIt = find_if(playerList.begin(), playerList.end(), [] (const shared_ptr<Player>& p) {return p->playerID == 0; });
-    shared_ptr<Player> playerOne = *playerOneIt;
+    if ( playerOneIt != playerList.end()) {
+        shared_ptr<Player> playerOne = *playerOneIt;
 
-    auto newStrat = SequenceMoveAI();
-    newStrat.index = 0;
-    PlayerMove pMove;
-    pMove.move = Move::MOVE_FOLD;
-    pMove.bet_amount = 0;
-    newStrat.moveList = vector<PlayerMove>();
-    newStrat.moveList.emplace_back(pMove);
-    playerOne->strategy = make_unique<SequenceMoveAI>(newStrat);
+        auto newStrat = SequenceMoveAI();
+        newStrat.moveList.emplace_back(PlayerMove { Move::MOVE_ALLIN, 0});
+        playerOne->strategy = make_unique<SequenceMoveAI>(newStrat);
+        // player 0 should do nothing but all-in now
+    }
 
-
-    // player 0 should do nothing but fold now
     game->doRound();
 }
 

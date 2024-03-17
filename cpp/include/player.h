@@ -17,7 +17,8 @@ namespace Poker{
     struct PlayerMove {
         Move move;
         int bet_amount;
-        PlayerMove() { move = Move::MOVE_UNDEF; bet_amount = -1;}
+        PlayerMove() { move = Move::MOVE_UNDEF; bet_amount = 0;}
+        PlayerMove(Move m, int b) { bet_amount=b; move=m; }
     };
 
     enum class PlayerPosition : int {
@@ -138,18 +139,10 @@ namespace Poker{
             PlayerMove  move;
             FullHandRank FHR;
             std::vector<Card> hand;
-            unique_ptr<Strategy> strategy;
+            shared_ptr<Strategy> strategy;
             
             Player() = default;
-            Player(const Player& p) {
-                // copy everything but the Strategy
-                bankroll = p.bankroll;
-                playerID = p.playerID;
-                position = p.position;
-                move = p.move;
-                FHR = p.FHR;
-                hand = p.hand;
-            }
+            Player(const Player& p) = default;
             Player(Player&& p) = default;
             ~Player() = default;
             Player(int p);
