@@ -10,13 +10,13 @@ namespace Poker{
         // Default behavior: Always call
         // p = contains last move info
         auto clamp = [](int a, int b, int c) -> int { if(a<b) a=b; if(a>c) a=c; return a;};
-        
         PlayerMove myMove;
         myMove.move = Move::MOVE_CALL;
-        int callAmount = info->minimumBet - p->move.bet_amount; // Amount required to meet the minimumBet
-        myMove.bet_amount = clamp(callAmount, 0, p->bankroll);
+        myMove.bet_amount = info->minimumBet;
+        myMove.bet_amount = clamp(myMove.bet_amount, 0, p->bankroll);
         if( myMove.bet_amount == p->bankroll) myMove.move = Move::MOVE_ALLIN;
         return myMove;
+        
     }   
 
     PlayerMove SingleMoveCallAI::makeMove(std::shared_ptr<Table> info, const shared_ptr<Player> p) {
@@ -24,8 +24,8 @@ namespace Poker{
         
         PlayerMove myMove;
         myMove.move = Move::MOVE_CALL;
-        int callAmount = info->minimumBet - p->move.bet_amount; // Amount required to meet the minimumBet
-        myMove.bet_amount = clamp(callAmount, 0, p->bankroll);
+        myMove.bet_amount = info->minimumBet;
+        myMove.bet_amount = clamp(myMove.bet_amount, 0, p->bankroll);
         if( myMove.bet_amount == p->bankroll) myMove.move = Move::MOVE_ALLIN;
         return myMove;
     }   
@@ -50,9 +50,8 @@ namespace Poker{
             case 4:
                 myMove.move = Move::MOVE_ALLIN;
         }
-        int callAmount = info->minimumBet - p->move.bet_amount; // Amount required to meet the minimumBet
         if( myMove.move == Move::MOVE_FOLD) myMove.bet_amount = 0;
-        else if( myMove.move == Move::MOVE_CALL) myMove.bet_amount = callAmount;
+        else if( myMove.move == Move::MOVE_CALL) myMove.bet_amount = info->minimumBet;
         else if( myMove.move == Move::MOVE_RAISE) myMove.bet_amount = info->minimumBet * 2;
         else if( myMove.move == Move::MOVE_ALLIN) myMove.bet_amount = p->bankroll;
         myMove.bet_amount = clamp(myMove.bet_amount, 0, p->bankroll);
@@ -68,11 +67,10 @@ namespace Poker{
         if( index != moveList.size())
             index++;
         // sanitize the move... unnecessary?
-        int callAmount = info->minimumBet - p->move.bet_amount; // Amount required to meet the minimumBet
         if( myMove.move == Move::MOVE_FOLD) myMove.bet_amount = 0;
-        if( myMove.move == Move::MOVE_CALL) myMove.bet_amount = callAmount;
+        if( myMove.move == Move::MOVE_CALL) myMove.bet_amount = info->minimumBet;
         if( myMove.move == Move::MOVE_ALLIN) myMove.bet_amount = p->bankroll;
-        myMove.bet_amount = clamp(callAmount, 0, p->bankroll);
+        myMove.bet_amount = clamp(myMove.bet_amount, 0, p->bankroll);
         if( myMove.bet_amount == p->bankroll) myMove.move = Move::MOVE_ALLIN;
         return myMove;
     }
@@ -81,6 +79,8 @@ namespace Poker{
         if ( not strategy ) 
             strategy = make_unique<Strategy>();
         PlayerMove move = strategy->makeMove(info, make_shared<Player>(*this));
+        // subtract away only the difference between the last bet amount and the table minimum
+        this->bankroll -= (info->minimumBet - this->move.bet_amount);
         this->move = move;
         return move;
     }

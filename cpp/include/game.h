@@ -128,6 +128,7 @@ namespace Poker {
                 table.street = 0;                      // set to preflop
                 table.minimumBet   = table.bigBlind; 
                 table.pot = 0;
+
                 // process blind bets
                 auto SB = *find_if(bettingPlayers.begin(), bettingPlayers.end(), [](const shared_ptr<Player>& a) { return a->getPosition() == PlayerPosition::POS_SB;});
                 auto BB = *find_if(bettingPlayers.begin(), bettingPlayers.end(), [](const shared_ptr<Player>& a) { return a->getPosition() == PlayerPosition::POS_BB;});
@@ -180,10 +181,9 @@ namespace Poker {
 
                         while (i != bettingPlayers.end()) {
                             shared_ptr<Player> P = *i;
-                            PlayerMove Pmove;
-                            Pmove =  P->makeMove(make_shared<Table>(table)) ;
-                            table.pot  += Pmove.bet_amount;
-                            P->bankroll -= Pmove.bet_amount;
+                            PlayerMove oldPmove = P->move;
+                            PlayerMove Pmove =  P->makeMove(make_shared<Table>(table)) ;
+                            table.pot  +=  Pmove.bet_amount - oldPmove.bet_amount;
                             // TODO: Change the entire Move object to be derivable from the bet_amount
 
                             const bool allIn = Pmove.move == Move::MOVE_ALLIN;

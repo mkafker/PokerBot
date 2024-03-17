@@ -107,7 +107,7 @@ void monteCarloGameStateCompare() {
     game->setup();
     // do a round to make it interesting
     game->doRound();
-    // convert our player to a SequenceAI
+    // convert player 0 to a SequenceMoveAI that always goes all-in
     auto playerList = myTable.playerList;
     auto playerOneIt = find_if(playerList.begin(), playerList.end(), [] (const shared_ptr<Player>& p) {return p->playerID == 0; });
     if ( playerOneIt != playerList.end()) {
@@ -123,6 +123,45 @@ void monteCarloGameStateCompare() {
 }
 
 
+void monteCarloGames(const uint64_t& N, vector<string> aiList) {
+    std::random_device rd;
+    auto myTable = Table();
+    // populate player list
+    myTable.setPlayerList(aiList);
+    // give everybody a benjamin
+    myTable.setPlayerBankrolls(100);
+    // set blind amounts
+    myTable.bigBlind = 10;
+    myTable.smallBlind = 5;
+
+    auto game = std::make_shared<Game>(myTable);
+    game->activePlayers = game->table.getPlayersInBettingOrder(); // activate all players
+
+    // setup some statistics
+    unordered_map<PlayerPosition, int> posWinCount;
+    unordered_map<int, int> playerIDWinCount;
+
+    auto start = std::chrono::steady_clock::now();
+    int iT = 0;
+    for(int iN = 0; iN < N; iN++) {
+        game->setup();
+        game->table.setPlayerBankrolls(100);
+        game->doGame();
+        if( game->lastRoundWinner ) {
+            posWinCount[game->lastRoundWinner->position]++;
+            playerIDWinCount[game->lastRoundWinner->playerID]++;
+        }
+    }
+
+    std::chrono::duration<double> duration = std::chrono::steady_clock::now() - start;
+    std::cout << N << " games calculated in " << duration.count() << " seconds, or " << double(N)/duration.count() << " games/second" << std::endl;
+    for( const auto& pair : posWinCount) {
+        std::cout << PlayerPosition_to_String[pair.first] << ": " << pair.second << " wins" << std::endl;
+    }
+    for( const auto& pair : playerIDWinCount) {
+        std::cout << "Player " << pair.first << ": " << pair.second << " wins" << std::endl;
+    }
+}
 
 
   void monteCarloHandRankCompare(const std::vector<Card>& cardsA, const std::vector<Card>& cardsB, const double& varTarget) {

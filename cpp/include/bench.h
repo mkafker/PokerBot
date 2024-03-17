@@ -1,5 +1,6 @@
 #pragma once
 #include "card.h"
+#include <vector>
 
 namespace Poker {
   void benchmarkHandRankCalculator();
@@ -8,6 +9,7 @@ namespace Poker {
 
   void monteCarloHandRankCompare(const std::vector<Card>& cardsA, const std::vector<Card>& cardsB, const double& tgt);
   void monteCarloHandRankCompare(const std::vector<Card>& cardsA, const std::vector<Card>& cardsB, const uint64_t& N);
+  void monteCarloGames(const uint64_t& N, std::vector<std::string> aiList );
 
   void monteCarloGameStateCompare();
 

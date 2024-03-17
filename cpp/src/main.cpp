@@ -43,7 +43,9 @@ int main() {
     //monteCarloHandRankCompare( myCards, theirCards, (uint64_t)1000000);
     //benchmarkRounds(100000);
     //benchmarkGames(10000);
-    monteCarloGameStateCompare();
+    //monteCarloGameStateCompare();
+    std::vector<std::string> aiList = {"call", "call", "call" };
+    monteCarloGames(1000, aiList);
 
     return 0;
 }
