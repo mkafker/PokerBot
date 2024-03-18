@@ -4,7 +4,7 @@
 #include <iostream>
 #include "table.h"
 #include "player.h"
-#define PRINT true
+#define PRINT false
 using namespace std;
 
 namespace Poker {
@@ -18,6 +18,7 @@ namespace Poker {
             vector<shared_ptr<Player>> allInPlayers;
             vector<shared_ptr<Player>> bettingPlayers;
             shared_ptr<Player> lastRoundWinner;
+            int nRounds;
 
 
 
@@ -74,6 +75,7 @@ namespace Poker {
             }
 
             void doGame() {
+                nRounds = 0;
                 auto nPlayers = bettingPlayers.size();
                 while( nPlayers > 1) {
                     table.resetCards(gameRD);
@@ -82,6 +84,7 @@ namespace Poker {
                     //copy_if(activePlayers.begin(), activePlayers.end(), back_inserter(bettingPlayers), [] (const shared_ptr<Player>& P) { return P->bankroll > 0;});
                     doRound();  
                     nPlayers = bettingPlayers.size();
+                    nRounds++;
                 }
 
                 #if PRINT

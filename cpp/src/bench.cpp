@@ -74,6 +74,7 @@ namespace Poker {
       vector<string> aiList = {"call", "random", "random", "random", "call", "random", "call"};
       auto start = std::chrono::steady_clock::now();
       int iT = 0;
+      int totalRounds = 0;
       auto game = std::make_shared<Game>();
       for(int iN = 0; iN < N; iN++) {
             auto table = game->table;
@@ -86,10 +87,12 @@ namespace Poker {
             game->activePlayers = table.getPlayersInBettingOrder();
             game->bettingPlayers = game->activePlayers;
             game->doGame();
+            totalRounds+=game->nRounds;
       }
 
       std::chrono::duration<double> duration = std::chrono::steady_clock::now() - start;
-      std::cout << N << " games calculated in " << duration.count() << " seconds, or " << double(N)/duration.count() << " games/second" << std::endl;
+      std::cout << N << " games (" << totalRounds << " rounds) calculated in " << duration.count() << " seconds, or " 
+      << double(N)/duration.count() << " games/s (" << double(totalRounds)/duration.count() << " rounds/s)" << std::endl;
   }
 
 void monteCarloGameStateCompare() {
@@ -144,6 +147,7 @@ void monteCarloGames(const uint64_t& N, vector<string> aiList) {
 
     auto start = std::chrono::steady_clock::now();
     int iT = 0;
+    int totalRounds = 0;
     for(int iN = 0; iN < N; iN++) {
         game->table.setPlayerBankrolls(100);
         game->setup();
@@ -151,10 +155,12 @@ void monteCarloGames(const uint64_t& N, vector<string> aiList) {
         if( game->lastRoundWinner ) {
             winners.emplace_back(game->lastRoundWinner);
         }
+        totalRounds+=game->nRounds;
     }
 
     std::chrono::duration<double> duration = std::chrono::steady_clock::now() - start;
-    std::cout << N << " games calculated in " << duration.count() << " seconds, or " << double(N)/duration.count() << " games/second" << std::endl;
+    //std::cout << N << " games (" << totalRounds << " rounds) calculated in " << duration.count() << " seconds, or " 
+    //<< double(N)/duration.count() << " games/s (" << double(totalRounds)/duration.count() << " rounds/s)" << std::endl;
 
     for( const auto& winner : winners ) {
             posWinCount[winner->position]++;
@@ -289,10 +295,6 @@ void monteCarloGames(const uint64_t& N, vector<string> aiList) {
       std::cout << "number of draws: " << numDraws << std::endl;
       std::cout << N << " hands calculated in " << duration.count() << " seconds, or " << double(N)/duration.count() << " hands/second" << std::endl;
   }
-
-
-
-
 
 
 }

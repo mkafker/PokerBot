@@ -112,5 +112,30 @@ namespace Poker {
       if( myMove.bet_amount == p->bankroll ) myMove.move = Move::MOVE_ALLIN;
       return myMove;
     }
+    
+    
+    PlayerMove HRBetRelAI::makeMove(shared_ptr<Table> info, const shared_ptr<Player> p) {
+      auto clamp = [](int& a, const int& b, const int& c)  { if(a<b) a=b; if(a>c) a=c;};
+      vector<Card> pHand = p->hand;
+      vector<Card> allCards = info->communityCards;
+      allCards.insert(allCards.begin(), pHand.begin(), pHand.end());
+      FullHandRank myFHR = calcFullHandRank(allCards);
+      
+      PlayerMove myMove;
+      myMove.bet_amount = rankBetRelationship[myFHR.handrank];
+      clamp(myMove.bet_amount, 0, p->bankroll);
+      if( myMove.bet_amount == 0 ) myMove.move = Move::MOVE_FOLD;
+      else if( myMove.bet_amount == p->bankroll ) myMove.move = Move::MOVE_ALLIN;
+      else {
+        clamp(myMove.bet_amount, info->minimumBet, p->bankroll);
+        if( myMove.bet_amount > info->minimumBet )
+          myMove.move = Move::MOVE_RAISE;
+        else
+          myMove.move = Move::MOVE_CALL;
+      }
+      return myMove;
+    }
+
 
 }
+
