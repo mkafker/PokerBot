@@ -44,8 +44,8 @@ int main() {
     //benchmarkRounds(100000);
     //benchmarkGames(10000);
     //monteCarloGameStateCompare();
-    std::vector<std::string> aiList = {"call", "call" };
-    monteCarloGames(20, aiList);
+    std::vector<std::string> aiList = {"fhrprop", "call", "call"};
+    monteCarloGames(1, aiList);
 
     return 0;
 }

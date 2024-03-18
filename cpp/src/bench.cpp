@@ -3,6 +3,7 @@
 #include "table.h"
 #include "player.h"
 #include "game.h"
+#include "strategy.h"
 #include <chrono>
 
 namespace Poker {
@@ -135,29 +136,40 @@ void monteCarloGames(const uint64_t& N, vector<string> aiList) {
     auto game = std::make_shared<Game>(myTable);
 
     // setup some statistics
+    std::vector<shared_ptr<Player>> winners;
+    //winners.resize(N);
     unordered_map<PlayerPosition, int> posWinCount;
     unordered_map<int, int> playerIDWinCount;
+    //unordered_map<string, int> aiWinCount;
 
     auto start = std::chrono::steady_clock::now();
     int iT = 0;
     for(int iN = 0; iN < N; iN++) {
-        game->table.setPlayerBankrolls(10);
+        game->table.setPlayerBankrolls(100);
         game->setup();
         game->doGame();
         if( game->lastRoundWinner ) {
-            posWinCount[game->lastRoundWinner->position]++;
-            playerIDWinCount[game->lastRoundWinner->playerID]++;
+            winners.emplace_back(game->lastRoundWinner);
         }
     }
 
     std::chrono::duration<double> duration = std::chrono::steady_clock::now() - start;
     std::cout << N << " games calculated in " << duration.count() << " seconds, or " << double(N)/duration.count() << " games/second" << std::endl;
+
+    for( const auto& winner : winners ) {
+            posWinCount[winner->position]++;
+            playerIDWinCount[winner->playerID]++;
+            //aiWinCount[getAIName(winner->strategy)]++;
+    }
     for( const auto& pair : posWinCount) {
         std::cout << PlayerPosition_to_String[pair.first] << ": " << pair.second << " wins" << std::endl;
     }
     for( const auto& pair : playerIDWinCount) {
         std::cout << "Player " << pair.first << ": " << pair.second << " wins" << std::endl;
     }
+    //for( const auto& pair : aiWinCount) {
+    //    std::cout << "Player " << pair.first << ": " << pair.second << " wins" << std::endl;
+    //}
 }
 
 

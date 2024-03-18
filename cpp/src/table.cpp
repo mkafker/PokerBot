@@ -1,5 +1,6 @@
 #include "table.h"
 #include "player.h"
+#include "strategy.h"
 namespace Poker {
 
     std::shared_ptr<Deck>   Table::getDeck() { return std::make_shared<Deck>(deck); }
@@ -27,12 +28,14 @@ namespace Poker {
             auto n = distance(sVec.begin(), it);
             auto guy = make_shared<Player>();
             if (s == "random") 
-                    guy->strategy = make_unique<RandomAI>();
+                    guy->strategy = make_shared<RandomAI>();
             else if (s == "call")
-                    guy->strategy = make_unique<SingleMoveCallAI>();
+                    guy->strategy = make_shared<SingleMoveCallAI>();
             else if (s == "sequence")
-                    guy->strategy = make_unique<SequenceMoveAI>();
-            else    guy->strategy = make_unique<RandomAI>();        // default = random moves
+                    guy->strategy = make_shared<SequenceMoveAI>();
+            else if (s == "fhrprop")
+                    guy->strategy = make_shared<FHRProportionalAI>();
+            else    guy->strategy = make_shared<RandomAI>();        // default = random moves
             guy->setPosition(playerPositionList[n]);
             guy->playerID = n;
             this->playerList.emplace_back(guy);

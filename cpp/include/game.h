@@ -115,6 +115,10 @@ namespace Poker {
                 const auto bPlayersBackup = bettingPlayers;
 
                 std::shared_ptr<Player> winningPlayer;
+                // bankrolls are updated after the round, transferAmount is used to keep track of what people owe
+                unordered_map<shared_ptr<Player>, int> transferAmount;
+                for_each(bettingPlayers.begin(), bettingPlayers.end(), [&transferAmount] (const shared_ptr<Player>& p) { transferAmount[p]=0;});
+
                 table.clearPlayerHands();
 
                 // clear community cards
@@ -132,10 +136,10 @@ namespace Poker {
                 auto BB = *find_if(bettingPlayers.begin(), bettingPlayers.end(), [](const shared_ptr<Player>& a) { return a->getPosition() == PlayerPosition::POS_BB;});
 
                 if( SB->bankroll > table.smallBlind ) {
-                    SB->bankroll -= table.smallBlind;
                     table.pot += table.smallBlind;
                     SB->move.bet_amount = table.smallBlind;
                     SB->move.move = Move::MOVE_CALL;
+                    transferAmount[SB] = table.smallBlind;
                 } else {
                     // if paying blind bet bankrupts players, force their move
                     bettingPlayers.erase(find(bettingPlayers.begin(), bettingPlayers.end(), SB));
@@ -143,13 +147,13 @@ namespace Poker {
                     SB->move.bet_amount = SB->bankroll;
                     SB->move.move = Move::MOVE_ALLIN;
                     table.pot += SB->move.bet_amount;
-                    SB->bankroll = 0;
+                    transferAmount[SB] = SB->bankroll;
                 }
                 if( BB->bankroll > table.bigBlind ) {
-                    BB->bankroll -= table.bigBlind;
                     table.pot += table.bigBlind;
                     BB->move.bet_amount = table.bigBlind;
                     BB->move.move = Move::MOVE_CALL;
+                    transferAmount[BB] = table.bigBlind;
                 } else {
                     // if paying blind bet bankrupts players, force their move
                     bettingPlayers.erase(find(bettingPlayers.begin(), bettingPlayers.end(), BB));
@@ -157,7 +161,7 @@ namespace Poker {
                     BB->move.bet_amount = BB->bankroll;
                     BB->move.move = Move::MOVE_ALLIN;
                     table.pot += BB->move.bet_amount;
-                    BB->bankroll = 0;
+                    transferAmount[BB] = BB->bankroll;
                 }
                 // TODO: clean this shit up!!! ^^^^^^
                 while( table.street < 4) {
@@ -183,10 +187,13 @@ namespace Poker {
 
                         while (i != bettingPlayers.end()) {
                             shared_ptr<Player> P = *i;
-                            PlayerMove oldPmove = P->move;
-                            PlayerMove Pmove =  P->makeMove(make_shared<Table>(table)) ;
-                            table.pot  +=  Pmove.bet_amount - oldPmove.bet_amount;
-                            // TODO: Change the entire Move object to be derivable from the bet_amount
+                            PlayerMove Pmove =  P->makeMove(make_shared<Table>(table));
+
+                            table.pot += Pmove.bet_amount - transferAmount[P];
+                            transferAmount[P] = Pmove.bet_amount;
+                            
+                            
+                            // TODO: Change the entire Move object to be derivable from the bet_amount ?
 
                             const bool allIn = Pmove.move == Move::MOVE_ALLIN;
                             const bool folded = Pmove.move == Move::MOVE_FOLD;
@@ -201,6 +208,9 @@ namespace Poker {
 
                             // remove player from game if folded or all in
                             if( folded ) {
+                                //take their money now
+                                P->bankroll -= transferAmount[P];
+                                transferAmount[P] = 0;
                                 foldedPlayers.emplace_back(P);
                                 i = bettingPlayers.erase(i);
                             }
@@ -224,6 +234,11 @@ namespace Poker {
                 showdownPlayers.insert(showdownPlayers.end(), allInPlayers.cbegin(), allInPlayers.cend());
 
                 winningPlayer = determineWinner(showdownPlayers);
+                // process bankrolls
+                for_each(showdownPlayers.begin(), showdownPlayers.end(), [&transferAmount] (const shared_ptr<Player>& p) {
+                    p->bankroll -= transferAmount[p];
+                    transferAmount[p]=0;
+                });
 
                 if( winningPlayer ) {
                     // finally, reward player

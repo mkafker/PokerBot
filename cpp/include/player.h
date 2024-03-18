@@ -6,7 +6,11 @@
 
 #include "table.h"
 #include "showdown.h"
+#include "strategy.h"
 namespace Poker{
+    struct Strategy;
+    class Table;
+
     enum class Move : int {
         MOVE_UNDEF = -1,
         MOVE_FOLD = 0,
@@ -104,6 +108,7 @@ namespace Poker{
         return ret;
     };
 
+
     class Player {
         public:
             int  bankroll;
@@ -112,7 +117,7 @@ namespace Poker{
             PlayerMove  move;
             FullHandRank FHR;
             std::vector<Card> hand;
-            shared_ptr<Strategy> strategy;
+            std::shared_ptr<Strategy> strategy;
             
             Player() = default;
             Player(const Player& p) = default;
@@ -127,7 +132,7 @@ namespace Poker{
             void setPosition(const PlayerPosition &p) { this->position = p; }
             void resetHand();
             inline bool isBankrupt();
-            PlayerMove makeMove(shared_ptr<Table> tableInfo);
+            PlayerMove makeMove(std::shared_ptr<Table> tableInfo);
     };
 
     

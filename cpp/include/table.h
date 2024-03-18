@@ -4,6 +4,7 @@
 #include <algorithm>
 
 #include "card.h"
+#include "strategy.h"
 using namespace std;
 namespace Poker {
 
