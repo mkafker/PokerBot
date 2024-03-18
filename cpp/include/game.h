@@ -79,9 +79,6 @@ namespace Poker {
                 auto nPlayers = bettingPlayers.size();
                 while( nPlayers > 1) {
                     table.resetCards(gameRD);
-                    // fill bettingPlayers with non-bankrupt players
-                    //bettingPlayers.clear();
-                    //copy_if(activePlayers.begin(), activePlayers.end(), back_inserter(bettingPlayers), [] (const shared_ptr<Player>& P) { return P->bankroll > 0;});
                     doRound();  
                     nPlayers = bettingPlayers.size();
                     nRounds++;

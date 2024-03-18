@@ -5,6 +5,7 @@
 
 #include "card.h"
 #include "strategy.h"
+#include "player.h"
 using namespace std;
 namespace Poker {
 
@@ -37,6 +38,6 @@ namespace Poker {
             bool arePlayerPositionsValid(const vector<shared_ptr<Player>>& pList);
 
             void shuffleDeck();
-
+            shared_ptr<Player> getPlayerByID(const int& id);
     };
 }

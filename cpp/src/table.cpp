@@ -22,7 +22,6 @@ namespace Poker {
     void Table::setPlayerList(const vector<string> sVec) {
         this->playerList.clear();
         std::vector<PlayerPosition> playerPositionList = numPlayersToPositionList(sVec.size());
-        this->playerList.clear();
         for(auto it = sVec.begin(); it != sVec.end(); it++) {
             auto s = *it;
             auto n = distance(sVec.begin(), it);
@@ -35,6 +34,8 @@ namespace Poker {
                     guy->strategy = make_shared<SequenceMoveAI>();
             else if (s == "fhrprop")
                     guy->strategy = make_shared<FHRProportionalAI>();
+            else if (s == "hrbetrel")
+                    guy->strategy = make_shared<HRBetRelAI>();
             else    guy->strategy = make_shared<RandomAI>();        // default = random moves
             guy->setPosition(playerPositionList[n]);
             guy->playerID = n;
@@ -97,5 +98,9 @@ namespace Poker {
         } );
         return uniquePositionPlayers.size() == pList.size();
     }
+
+    shared_ptr<Player> Table::getPlayerByID(const int& id) {
+        return *std::find_if(this->playerList.begin(), this->playerList.end(), [&id] (const shared_ptr<Player>& p) {return p->playerID == id;});
+    };
 
 }

@@ -14,6 +14,8 @@
 #include "player.h"
 #include "game.h"
 #include "bench.h"
+#include "pybindings.h"
+
 using namespace Poker;
 int main() {
     std::vector<Card> straightflush = {  Card(Rank::C_A, Suit::DIAMOND     ), 
@@ -44,7 +46,30 @@ int main() {
     //benchmarkRounds(100000);
     //benchmarkGames(10000);
     //monteCarloGameStateCompare();
-    std::vector<std::string> aiList = {"fhrprop", "rand", "rand", "call", "call"};
-    monteCarloGames(20000, aiList);
+    //std::vector<std::string> aiList = {"fhrprop", "rand", "rand", "call", "call"};
+    //monteCarloGames(20000, aiList);
+
+
+    std::random_device rd;
+    std::mt19937_64 gen(rd());
+    std::uniform_real_distribution<float> dis(0.0f, 9.0f);
+    for(int j = 0; j < 100000; j++ ) {
+        std::cout << "==========================================" << std::endl;
+        std::vector<float> inputRBRraw = {0.480152, 0.633489, 3.5006};
+        std::cout << "input = [";
+        for(auto& i : inputRBRraw) {
+            //i = dis(gen);
+            std::cout << i << ", ";
+        }
+        std::cout << "]" << std::endl;
+
+        int N = 1000;
+        double result = Poker::pyMonteCarloGames( N,  inputRBRraw);
+        std::cout << "result = " << result << std::endl;
+    }
+
+
+
+
     return 0;
 }

@@ -56,7 +56,6 @@ namespace Poker {
 
 
 
-
     inline void sortCards(std::vector<Card> h);
     inline void sortCardsDescending(std::vector<Card> h);
 

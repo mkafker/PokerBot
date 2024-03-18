@@ -48,7 +48,15 @@ namespace Poker {
             using Strategy::Strategy;
             PlayerMove makeMove(std::shared_ptr<Table> info, const shared_ptr<Player>) override;
             std::map<HandRank, int> rankBetRelationship = {
-                
+                {HandRank::HIGH_CARD , 1},
+                {HandRank::ONE_PAIR , 2},
+                {HandRank::TWO_PAIR , 3},
+                {HandRank::THREE_KIND , 4},
+                {HandRank::STRAIGHT , 5},
+                {HandRank::FLUSH , 6},
+                {HandRank::FULL_HOUSE , 7},
+                {HandRank::FOUR_KIND , 8}, 
+                {HandRank::STRAIGHT_FLUSH , 9}
             };
     };
 
