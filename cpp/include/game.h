@@ -4,7 +4,7 @@
 #include <iostream>
 #include "table.h"
 #include "player.h"
-#define PRINT false
+#define PRINT true
 using namespace std;
 
 namespace Poker {
@@ -188,25 +188,13 @@ namespace Poker {
                         while (i != bettingPlayers.end()) {
                             shared_ptr<Player> P = *i;
                             PlayerMove Pmove =  P->makeMove(make_shared<Table>(table));
-
-                            table.pot += Pmove.bet_amount - transferAmount[P];
-                            transferAmount[P] = Pmove.bet_amount;
-                            
-                            
-                            // TODO: Change the entire Move object to be derivable from the bet_amount ?
-
                             const bool allIn = Pmove.move == Move::MOVE_ALLIN;
                             const bool folded = Pmove.move == Move::MOVE_FOLD;
+                            
                             // Set the new minimum bet if player raised
                             table.minimumBet = max(Pmove.bet_amount, table.minimumBet);
 
-                            #if PRINT
-                            printPlayerMove(*P, Pmove);
-                            std::cout << "Minimum bet: " << table.minimumBet << std::endl;
-                            std::cout << "Current pot: " << table.pot << std::endl;
-                            #endif
-
-                            // remove player from game if folded or all in
+                            
                             if( folded ) {
                                 //take their money now
                                 P->bankroll -= transferAmount[P];
@@ -214,15 +202,25 @@ namespace Poker {
                                 foldedPlayers.emplace_back(P);
                                 i = bettingPlayers.erase(i);
                             }
-                            else if( allIn ) {
-                                allInPlayers.emplace_back(P);
-                                i = bettingPlayers.erase(i);
-                            }
                             else {
-                                i++;
+                                // bet_amount should be equal or greater than transferAmount[P]
+                                table.pot += Pmove.bet_amount - transferAmount[P];
+                                transferAmount[P] = Pmove.bet_amount;
+                                if( allIn ) {
+                                    allInPlayers.emplace_back(P);
+                                    i = bettingPlayers.erase(i);
+                                }
+                                else {
+                                    i++;
+                                }
                             }
                             // Do another round the table only if somebody raised
                             if( minimumBetBeforeRound != table.minimumBet ) { keepgoing = true; }
+                            #if PRINT
+                            printPlayerMove(*P, Pmove);
+                            std::cout << "Minimum bet: " << table.minimumBet << std::endl;
+                            std::cout << "Current pot: " << table.pot << std::endl;
+                            #endif
                         }
                     }
                     // advance game
@@ -280,7 +278,11 @@ namespace Poker {
                 if ( numPlayers == 0) { return nullptr; }   // error
 
                 else if ( numPlayers == 1) {
-                        return *playersInBegin;
+                    // just compute the guy's FHR and return him
+                    auto cards = table.communityCards;
+                    cards.insert(cards.end(), playersIn[0]->hand.begin(), playersIn[0]->hand.end());
+                    playersIn[0]->FHR = calcFullHandRank(cards);
+                    return playersIn[0];
                 }
                 else if ( numPlayers >= 2) {
                     // showdown
