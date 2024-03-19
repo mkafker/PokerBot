@@ -34,8 +34,8 @@ namespace Poker {
                     guy->strategy = make_shared<SequenceMoveAI>();
             else if (s == "fhrprop")
                     guy->strategy = make_shared<FHRProportionalAI>();
-            else if (s == "hrbetrel")
-                    guy->strategy = make_shared<HRBetRelAI>();
+            else if (s == "handstreetaware")
+                    guy->strategy = make_shared<HandStreetAwareAI>();
             else    guy->strategy = make_shared<RandomAI>();        // default = random moves
             guy->setPosition(playerPositionList[n]);
             guy->playerID = n;

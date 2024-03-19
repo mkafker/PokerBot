@@ -43,11 +43,12 @@ namespace Poker {
         PlayerMove makeMove(std::shared_ptr<Table> info, const shared_ptr<Player>) override;
     };
 
-    struct HRBetRelAI : public Strategy {
+    struct HandStreetAwareAI : public Strategy {
         public:
             using Strategy::Strategy;
             PlayerMove makeMove(std::shared_ptr<Table> info, const shared_ptr<Player>) override;
-            std::map<HandRank, int> rankBetRelationship = {
+            // how many big blinds to bet in each situation
+            /*std::map<HandRank, int> rankBetRelationship = {
                 {HandRank::HIGH_CARD , 1},
                 {HandRank::ONE_PAIR , 2},
                 {HandRank::TWO_PAIR , 3},
@@ -57,7 +58,9 @@ namespace Poker {
                 {HandRank::FULL_HOUSE , 7},
                 {HandRank::FOUR_KIND , 8}, 
                 {HandRank::STRAIGHT_FLUSH , 9}
-            };
+            };*/
+            // which relationship to use during different phases of the game
+            std::map<int, std::map<HandRank, int>> streetRBR;
     };
 
     
@@ -73,8 +76,8 @@ namespace Poker {
     inline std::string getAIName(shared_ptr<FHRProportionalAI> &a) { 
         return "fhrprop";
     }
-    inline std::string getAIName(shared_ptr<HRBetRelAI> &a) {
-        return "hrbetrel";
+    inline std::string getAIName(shared_ptr<HandStreetAwareAI> &a) {
+        return "handstreetaware";
     }
 
 }

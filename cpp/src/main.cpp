@@ -53,12 +53,12 @@ int main() {
     std::random_device rd;
     std::mt19937_64 gen(rd());
     std::uniform_real_distribution<float> dis(0.0f, 9.0f);
-    for(int j = 0; j < 100000; j++ ) {
+    for(int j = 0; j < 100; j++ ) {
         std::cout << "==========================================" << std::endl;
-        std::vector<float> inputRBRraw = {0.480152, 0.633489, 3.5006};
+        std::vector<float> inputRBRraw = {1., 1., 1., 1., 1., 1., 1., 1.};
         std::cout << "input = [";
         for(auto& i : inputRBRraw) {
-            //i = dis(gen);
+            i = dis(gen);
             std::cout << i << ", ";
         }
         std::cout << "]" << std::endl;

@@ -4,7 +4,7 @@
 #include <iostream>
 #include "table.h"
 #include "player.h"
-#define PRINT true
+#define PRINT false
 using namespace std;
 
 namespace Poker {

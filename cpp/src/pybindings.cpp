@@ -6,7 +6,7 @@
 #include <chrono>
 
 
-#define PYTHON false
+#define PYTHON true
 #if PYTHON
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
@@ -21,26 +21,36 @@ namespace Poker {
 
 double pyMonteCarloGames(const uint64_t& N, const std::vector<float> inputRBRraw) {
     // input: N games
-    // inputRBRraw vectorized rank-bet relationship map
-    //if( inputRBRraw.size() != 9 ) throw;
-    std::vector<int> inputRBRlessraw ( inputRBRraw.begin(), inputRBRraw.end());
-    std::vector<int> nines (9-inputRBRraw.size(), 9);
-    inputRBRlessraw.insert(inputRBRlessraw.end(), nines.begin(), nines.end() );
-    for(auto& i : inputRBRlessraw) {
-      if(i<0) i=0;
-      if(i>9) i=9;
+    // inputRBRraw vectorized rank-bet-street relationship map, indexed by street first. size() must be divisible by numStreets=4
+    // 
+    const int numStreets = 4;
+    const int ldHRmap = inputRBRraw.size() / numStreets;
+    std::map<int, std::map<HandRank, int>> strategyRel;
+    for(int i=0; i<numStreets; i++) {
+      const size_t id = ldHRmap*i;
+      auto inputIt = inputRBRraw.begin()+id;
+      std::vector<int> inputRBRlessraw ( inputIt, inputIt+ldHRmap);
+      std::vector<int> nines (9-inputRBRlessraw.size(), 9);
+      inputRBRlessraw.insert(inputRBRlessraw.end(), nines.begin(), nines.end() );
+      for(auto& i : inputRBRlessraw) {
+        if(i<0) i=0;
+        if(i>9) i=9;
+      }
+      std::map<HandRank, int> inputRBR;
+      for(int i=0; i<9; i++) {
+          inputRBR[static_cast<HandRank>(i+1)] = inputRBRlessraw[i];
+      }
+      strategyRel[i]=inputRBR;
     }
-    std::map<HandRank, int> inputRBR;
-    for(int i=0; i<9; i++) {
-        inputRBR[static_cast<HandRank>(i+1)] = inputRBRlessraw[i];
-    }
-    vector<string> aiList = {"hrbetrel", "call"};
+
+    // now begin games part
+    vector<string> aiList = {"handstreetaware", "call"};
     std::random_device rd;
     auto myTable = Table();
     // populate player list
     myTable.setPlayerList(aiList);
     auto playerZero = myTable.getPlayerByID(0);
-    std::dynamic_pointer_cast<HRBetRelAI>(playerZero->strategy)->rankBetRelationship = inputRBR;
+    std::dynamic_pointer_cast<HandStreetAwareAI>(playerZero->strategy)->streetRBR = strategyRel;
     // set blind amounts
     myTable.bigBlind = 10;
     myTable.smallBlind = 5;
@@ -53,7 +63,7 @@ double pyMonteCarloGames(const uint64_t& N, const std::vector<float> inputRBRraw
     auto start = std::chrono::steady_clock::now();
     int totalRounds = 0;
     int iN = 0;
-    int maxRounds = 100000;
+    int maxRounds = 10000;
     while( iN < N or totalRounds < maxRounds) {
       iN++;
       game->table.setPlayerBankrolls(100);
