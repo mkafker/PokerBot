@@ -5,8 +5,18 @@ import math
 import numpy as np
 import re
 
-_MAX_BET = 3 # Includes the antee of $1
-_BET_ROUNDS = 2
+'''
+This is supposed to be a version of MC-CFR+ which uses some version of
+bucketting for hands. It needs to keep track of the hand strength bucket
+as the current state for the player at every sub-round within a hand (ex:
+hand strength of 80% after the flop, but then it goes down to 20% at the turn)
+
+Currently this does not work. I need to write a new terminal_util function
+and also come up with some sort of MC choosing of the starting player's cards.
+Currently this is no set up to optimally save time while training.
+'''
+
+_MAX_BET = 5 # Includes the antee of $1
 
 class Card:
     SUIT_TO_STRING = {
@@ -57,16 +67,6 @@ class Card:
     def __eq__(self, other):
         return (isinstance(other, self.__class__) and self.rank == other.rank and self.suit == other.suit)
     
-    def __lt__(self, other):
-        if self.rank == other.rank:
-            return self.suit < other.suit
-        return self.rank < other.rank
-
-    def __gt__(self, other):
-        if self.rank == other.rank:
-            return self.suit > other.suit
-        return self.rank > other.rank
-
     def __hash__(self):
         return hash((self.rank, self.suit))
 
@@ -75,7 +75,7 @@ class Deck:
         self.cards = self.build_deck(ranks, suits)
 
     def build_deck(self, ranks, suits):
-        return {Card(rank, suit) for rank, suit in itertools.product([2+x for x in range(ranks)], [1+x for x in range(suits)])}
+        return {(rank, suit) for rank, suit in itertools.product([2+x for x in range(ranks)], [1+x for x in range(suits)])}
 
     def shuffle(self):
         import random
@@ -84,7 +84,7 @@ class Deck:
     def draw_combinations(self, cardnum):
         combinations = []
         for combination in itertools.combinations(self.cards, cardnum):
-            remaining_deck = Deck(1, 1) # dummy deck
+            remaining_deck = Deck(1, 1)
             remaining_deck.cards = copy.copy(self.cards)
             for card in combination:
                 remaining_deck.cards.remove(card)
@@ -104,7 +104,7 @@ def main():
     Run iterations of counterfactual regret minimization algorithm.
     """
     i_map = {}  # map of information sets
-    n_iterations = 100
+    n_iterations = 10
     expected_game_value = 0
 
     start_from = "P2"
@@ -157,7 +157,7 @@ def mccfr(i_map, start_from, infoset_key=";;;", deck = Deck(4, 2), opponent_card
         The probability contribution of chance events to reach `history`.
     """
 
-    if is_terminal_node(infoset_key, max_bet = _MAX_BET):
+    if is_terminal_node(infoset_key, betting_rounds = 2, max_bet = _MAX_BET):
 
         player_id = infoset_key.split(";")[0]
         if player_id == "P1":
@@ -169,7 +169,7 @@ def mccfr(i_map, start_from, infoset_key=";;;", deck = Deck(4, 2), opponent_card
 
         return terminal_util(infoset_key, p1_cards, p2_cards, player_id)
     
-    if is_chance_node(infoset_key):
+    if is_chance_node(infoset_key, betting_rounds = 2):
         return chance_util(i_map, start_from, infoset_key, deck, opponent_cards, pr_1, pr_2, pr_c)
 
     player_id = infoset_key.split(";")[0]
@@ -265,9 +265,9 @@ class InformationSet():
         self.num = 0
 
     def next_strategy(self):
-        # self.strategy_sum += self.reach_pr * self.strategy
+        self.strategy_sum += self.reach_pr * self.strategy
         self.num += 1
-        self.strategy_sum += self.strategy
+        # self.strategy_sum += self.strategy
         self.strategy = self.calc_strategy()
         self.reach_pr_sum += self.reach_pr
         self.reach_pr = 0
@@ -299,12 +299,8 @@ class InformationSet():
         Nash equilibrium strategy.
         """
 
-        # if self.reach_pr_sum <= 0:
-        #     print(self.reach_pr_sum)
-        #     quit()
-
-        # strategy = self.strategy_sum / self.reach_pr_sum
-        strategy = self.strategy_sum / self.num
+        strategy = self.strategy_sum / self.reach_pr_sum
+        # strategy = self.strategy_sum / self.num
 
         # Purify to remove actions that are likely a mistake
         strategy = np.where(strategy < 0.001, 0, strategy)
@@ -461,16 +457,16 @@ def valid_actions(infoset_key, max_bet):
     return actions
 
 
-def is_chance_node(infoset_key):
+def is_chance_node(infoset_key, betting_rounds):
     """
     Determine if we are at a chance node based on tree history.
     """
     action_history = infoset_key.split(";")[-1].split('/')
     if len(action_history) == 1 and len(action_history[0]) == 0:
         return True
-    if len(action_history) < _BET_ROUNDS + 1: # Not in final betting round
+    if len(action_history) < betting_rounds + 1: # Not in final betting round
         final_history = extract_actions(action_history[-1])
-        if len(final_history) > 1:          
+        if len(final_history) > 1: 
             final_moves = final_history[-2:] # Both players have taken at least one action
             if final_moves[-1] in ['a', 'c']:
                 return True
@@ -480,24 +476,25 @@ def chance_util(i_map, start_from, infoset_key, deck, opponent_cards, pr_1, pr_2
     
     player_id = infoset_key.split(";")[0]
     action_history = infoset_key.split(";")[-1].split('/')
-
+    
     if len(action_history) == 1 and len(action_history[0]) == 0: # Initializing
         expected_value = 0
         n_possibilities = math.comb(len(deck.cards), 4) * math.comb(4, 2)
 
-        for deal in deck.draw_combinations(2):
-            p1_cards, new_deck = deal
-            p2_cards, final_deck = new_deck.draw_random_cards(2)
-            p1_cards = sort_cards(p1_cards)
-            p2_cards = sort_cards(p2_cards)
+        p1_cards, new_deck = deal
+        p2_cards, final_deck = new_deck.draw_random_cards(2)
+        p1_cards = sorted_cards(p1_cards)
+        p2_cards = sorted_cards(p2_cards)
 
-            if start_from == "P1":
+        if start_from == "P1":
+            for deal in deck.draw_combinations(2):
                 infoset_key = f'P1;{p1_cards[0]}/{p1_cards[1]};;aa/'
                 opponent_cards = p2_cards
                 expected_value += mccfr(i_map, start_from, infoset_key, final_deck, opponent_cards,
                                 1, 1, 1 / n_possibilities)
 
-            else:
+        else:
+            for deal in deck.draw_combinations(2):
                 infoset_key = f'P2;{p2_cards[0]}/{p2_cards[1]};;aa/'
                 opponent_cards = p1_cards
 
@@ -516,44 +513,71 @@ def chance_util(i_map, start_from, infoset_key, deck, opponent_cards, pr_1, pr_2
     ##################################
     # Actually Drawing Community Cards
     ##################################
+    # if len(action_history) > 1:
+    #     expected_value = 0
+        
+    #     if len(action_history) == 2:
+    #         cards_to_draw = 3
+    #     else:
+    #         cards_to_draw = 1
+
+    #     n_possibilities = math.comb(len(deck.cards), cards_to_draw)
+
+    #     for deal in deck.draw_combinations(cards_to_draw):
+    #         co_cards, new_deck = deal
+    #         co_cards = sort_cards(co_cards)
+
+    #         new_infoset_key = infoset_key.split(";")
+
+    #         co_cards = ["/".join([str(x) for x in co_cards])]
+    #         if new_infoset_key[2]: # Already have some co_cards
+    #             co_cards = [new_infoset_key[2] + "/" + co_cards[0]]
+
+    #         new_infoset_key = new_infoset_key[0:2] + ["/".join([str(x) for x in co_cards])] + [new_infoset_key[-1]]
+    #         new_infoset_key = ';'.join(new_infoset_key) + "/"
+
+    #         if player_id == "P2":
+    #             new_infoset_key, opponent_cards = swap_players(new_infoset_key, opponent_cards)
+
+    #         expected_value += mccfr(i_map, start_from, new_infoset_key, deck, opponent_cards,
+    #                                 pr_1, pr_2, pr_c * 1 / n_possibilities)
+        
+    #     return expected_value / n_possibilities
+
+
+    ############################
+    # Using MC for Hand Strength
+    ############################
     if len(action_history) > 1:
         expected_value = 0
         
         if len(action_history) == 2:
-            # cards_to_draw = 3
-            cards_to_draw = 1
+            cards_to_draw = 3
         else:
             cards_to_draw = 1
-
         n_possibilities = math.comb(len(deck.cards), cards_to_draw)
 
-        for deal in deck.draw_combinations(cards_to_draw):
-            co_cards, new_deck = deal
-            co_cards = sort_cards(co_cards)
+        player_cards = parse_player_cards(infoset_key)
+        # hand_strength should be an integer in [0,1,2,3,4]
+        hand_strength = int(estimate_hand_strength(1000, player_cards, deck) * 100 / 5)
 
-            new_infoset_key = infoset_key.split(";")
+        new_infoset_key = infoset_key.split(";")
+        new_infoset_key = new_infoset_key[0:2] + [str(hand_strength)] + [new_infoset_key[-1]]
+        new_infoset_key = ';'.join(new_infoset_key) + "/"
 
-            co_cards = ["/".join([str(x) for x in co_cards])]
-            if new_infoset_key[2]: # Already have some co_cards
-                co_cards = [new_infoset_key[2] + "/" + co_cards[0]]
+        if player_id == "P2":
+            new_infoset_key, opponent_cards = swap_players(new_infoset_key, opponent_cards)
 
-            new_infoset_key = new_infoset_key[0:2] + ["/".join([str(x) for x in co_cards])] + [new_infoset_key[-1]]
-            new_infoset_key = ';'.join(new_infoset_key) + "/"
-
-            if player_id == "P2":
-                new_infoset_key, opponent_cards = swap_players(new_infoset_key, opponent_cards)
-
-            expected_value += mccfr(i_map, start_from, new_infoset_key, deck, opponent_cards,
-                                    pr_1, pr_2, pr_c * 1 / n_possibilities)
+        expected_value += mccfr(i_map, start_from, new_infoset_key, deck, opponent_cards,
+                                pr_1, pr_2, pr_c * 1 / n_possibilities)
         
         return expected_value / n_possibilities
 
-
-def is_terminal_node(infoset_key, max_bet):
+def is_terminal_node(infoset_key, betting_rounds, max_bet):
     action_history = infoset_key.split(";")[-1].split('/')
     if len(action_history) > 1:
         
-        if len(action_history) < _BET_ROUNDS + 1: # +1 is for antee round
+        if len(action_history) < betting_rounds + 1: # +1 is for antee round
             p1_commited, p2_commited = player_money_bet(action_history)
             if p1_commited == max_bet and p2_commited == max_bet:
                 return True # Players have all in before the final round
@@ -561,20 +585,46 @@ def is_terminal_node(infoset_key, max_bet):
         final_history = extract_actions(action_history[-1]) # Only look at the latest round
         if len(final_history) > 0 and 'f' == final_history[-1]:
             return True # A player folded
-        if len(final_history) > 1 and len(action_history) == _BET_ROUNDS + 1:
+        if len(final_history) > 1:
             final_moves = final_history[-2:] # Both players have taken at least one action
             if final_moves[-1] == 'c':
                 return True
             
     return False
 
-def terminal_util(infoset_key, p1_cards, p2_cards, player_id):
+# def terminal_util(infoset_key, p1_cards, p2_cards, player_id):
+#     """
+#     Returns the utility of a terminal history.
+#     All action has finished, payouts are determined.
+#     """
+
+#     co_cards = parse_community_cards(infoset_key)
+#     action_history = infoset_key.split(";")[-1].split('/')
+
+#     p1_commited, p2_commited = player_money_bet(action_history)
+#     winner = evaluate_winner(p1_cards, p2_cards, co_cards, action_history)
+
+#     if winner == -1: # Tie
+#         return 0
+
+#     if player_id == "P1":
+#         if winner == 1:
+#             return p2_commited
+#         else:
+#             return -1 * p1_commited
+#     if player_id == "P2":
+#         if winner == 2:
+#             return p1_commited
+#         else:
+#             return -1 * p2_commited
+
+def terminal_util_handbuckets(infoset_key, p1_cards, p2_cards, player_id, deck):
     """
     Returns the utility of a terminal history.
     All action has finished, payouts are determined.
     """
+    co_cards, new_deck = random.choice(deck.draw_combinations(5))
 
-    co_cards = parse_community_cards(infoset_key)
     action_history = infoset_key.split(";")[-1].split('/')
 
     p1_commited, p2_commited = player_money_bet(action_history)
@@ -608,28 +658,30 @@ def evaluate_winner(cards_1, cards_2, community_cards, history):
         else:
             return 2
 
-    def get_best_card(cards):
-        best_card = Card(-1, -1)
-        for card in cards:
-            if card.rank > best_card.rank:
-                best_card = card
-            elif card.rank == best_card.rank and card.suit > best_card.suit:
-                best_card = card
-        return best_card
+    # Assuming no one folded, evaluate based on 2 pair > high card
+    p1_best_card = max([int(card.rank) for card in cards_1])
+    p2_best_card = max([int(card.rank) for card in cards_2])
+    p1_worst_card = min([int(card.rank) for card in cards_1])
+    p2_worst_card = min([int(card.rank) for card in cards_2])
 
-    # Assuming no one folded, evaluate based on high card
-    p1_best_card = get_best_card(cards_1)
-    p2_best_card = get_best_card(cards_2)
-    
-    if p1_best_card.rank > p2_best_card.rank:
-        return 1
-    elif p2_best_card.rank > p1_best_card.rank:
-        return 2
-    elif p1_best_card.rank == p2_best_card.rank:
-        if p1_best_card.suit > p2_best_card.suit:
+    # Check for 2 pair
+    if community_cards and community_cards[0]:
+        if set([x.rank for x in cards_1]).intersection(set([x.rank for x in community_cards])):
             return 1
-        else:
+        elif set([x.rank for x in cards_2]).intersection(set([x.rank for x in community_cards])):
             return 2
+
+    # Check for high card
+    if p1_best_card > p2_best_card:
+        return 1
+    if p2_best_card > p1_best_card:
+        return 2
+    if p1_best_card == p2_best_card:
+        if p1_worst_card > p2_worst_card:
+            return 1
+        if p2_worst_card > p1_worst_card:
+            return 2
+        return -1
 
 
 def display_results(ev, i_map):
