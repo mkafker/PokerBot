@@ -52,10 +52,13 @@ int main() {
 
     std::random_device rd;
     std::mt19937_64 gen(rd());
-    std::uniform_real_distribution<float> dis(0.0f, 9.0f);
-    for(int j = 0; j < 100; j++ ) {
+    std::uniform_int_distribution<int> dis(0,10);
+    double highestWR = 0.0;
+    std::vector<int> inputRBRraw (117,1);
+    auto bestRBR = inputRBRraw;
+
+    for(int j = 0; j < 10; j++ ) {
         std::cout << "==========================================" << std::endl;
-        std::vector<float> inputRBRraw = {1., 1., 1., 1., 1., 1., 1., 1.};
         std::cout << "input = [";
         for(auto& i : inputRBRraw) {
             i = dis(gen);
@@ -63,10 +66,21 @@ int main() {
         }
         std::cout << "]" << std::endl;
 
-        int N = 1000;
-        double result = Poker::pyMonteCarloGames( N,  inputRBRraw);
+        int N = 10000;
+        double result = Poker::pyMonteCarloRounds( N,  inputRBRraw);
         std::cout << "result = " << result << std::endl;
+        if( result > highestWR) {
+            highestWR = result;
+            bestRBR = inputRBRraw;
+        }
     }
+    std::cout << "highest WR: " << highestWR << std::endl;
+    std::cout << "strategy: ";
+    for(auto& f : inputRBRraw) {
+        std::cout << f << " ";
+    }
+    std::cout << std::endl;
+
 
 
 
