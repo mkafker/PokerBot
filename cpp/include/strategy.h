@@ -8,6 +8,7 @@ using namespace std;
 
 namespace Poker {
     struct PlayerMove;
+    enum class Move;
     class Table;
     class Player;
     struct Strategy {
@@ -47,20 +48,43 @@ namespace Poker {
         public:
             using Strategy::Strategy;
             PlayerMove makeMove(std::shared_ptr<Table> info, const shared_ptr<Player>) override;
-            // how many big blinds to bet in each situation
-            /*std::map<HandRank, int> rankBetRelationship = {
-                {HandRank::HIGH_CARD , 1},
-                {HandRank::ONE_PAIR , 2},
-                {HandRank::TWO_PAIR , 3},
-                {HandRank::THREE_KIND , 4},
-                {HandRank::STRAIGHT , 5},
-                {HandRank::FLUSH , 6},
-                {HandRank::FULL_HOUSE , 7},
-                {HandRank::FOUR_KIND , 8}, 
-                {HandRank::STRAIGHT_FLUSH , 9}
-            };*/
             // which relationship to use during different phases of the game
             std::map<int, std::map<HandRank, int>> streetRBR;
+    };
+
+    struct FHRAwareAI : public Strategy {
+        public:
+            using Strategy::Strategy;
+            PlayerMove makeMove(std::shared_ptr<Table> info, const shared_ptr<Player>) override;
+            struct ReducedFullHandRank  {
+                HandRank handrank = HandRank::UNDEF_HANDRANK;                  
+                Card maincard = Card();        
+                bool operator==(const ReducedFullHandRank& other) const {
+                    return this->handrank == other.handrank and this->maincard == other.maincard;
+                }
+                bool operator<(const ReducedFullHandRank& other) const {
+                    if( this->handrank > other.handrank) return false;
+                    if( this->handrank < other.handrank) return true;
+                    if( this->maincard > other.maincard) return false;
+                    if( this->maincard < other.maincard) return true;
+                    return false;
+                }
+            };
+            static ReducedFullHandRank nullRFHR;
+
+            std::map<ReducedFullHandRank, int> RFHRBetRelationship;
+            void updateRFHRBetRelationship(const std::vector<int>& vec_in); // unpacks an input vector of parameters to the RFHRBetRel
+    };
+
+    struct MoveAwareAI : public Strategy {
+        // follows a strategy based off of the moves of other players
+        // only heads up games are supported
+        public:
+            using Strategy::Strategy;
+            PlayerMove makeMove(std::shared_ptr<Table> info, const shared_ptr<Player>) override;
+            map<vector<Move>, int> moveSequenceToBet;
+            vector<Move> enemyMoves;
+            void updateMoveSequenceToBet(const vector<int>& vec_in);
     };
 
     
@@ -79,5 +103,11 @@ namespace Poker {
     inline std::string getAIName(shared_ptr<HandStreetAwareAI> &a) {
         return "handstreetaware";
     }
+    inline std::string getAIName(shared_ptr<FHRAwareAI> &a) {
+        return "fhraware";
+    }
+
+
+    static PlayerMove betAmountToMove(int betAmount, shared_ptr<Table>& info, const shared_ptr<Player>& p);
 
 }

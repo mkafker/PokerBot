@@ -23,6 +23,7 @@ namespace Poker {
         FOUR_KIND = 8, 
         STRAIGHT_FLUSH = 9
     };
+    
     struct FullHandRank {
         // Holds full ranking information about a hand
         HandRank handrank;                  

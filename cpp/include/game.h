@@ -80,6 +80,8 @@ namespace Poker {
                 while( nPlayers > 1) {
                     table.resetCards(gameRD);
                     doRound();  
+                    // rotate player positions
+                    setNonBRPlayersPositions(1);
                     nPlayers = bettingPlayers.size();
                     nRounds++;
                 }
@@ -261,9 +263,6 @@ namespace Poker {
 
                 allInPlayers.clear();
                 foldedPlayers.clear();
-                // Fill bettingPlayers with non-bankrupt players
-                // also rotate player positions
-                setNonBRPlayersPositions(1);
 
             }
 
