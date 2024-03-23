@@ -121,8 +121,68 @@ namespace Poker {
       allCards.insert(allCards.begin(), pHand.begin(), pHand.end());
       FullHandRank myFHR = calcFullHandRank(allCards);
       
+      PlayerMove myMove = betAmountToMove(        streetRBR[info->street][myFHR.handrank] * info->bigBlind,     info, p);
+      return myMove;
+    }
+
+    PlayerMove FHRAwareAI::makeMove(shared_ptr<Table> info, const shared_ptr<Player> p) {
+      vector<Card> pHand = p->hand;
+      vector<Card> allCards = info->communityCards;
+      allCards.insert(allCards.begin(), pHand.begin(), pHand.end());
+      FullHandRank myFHR = calcFullHandRank(allCards);
+      ReducedFullHandRank RFHR;
+      RFHR.handrank = myFHR.handrank;
+      // max is probably unnecessary
+      RFHR.maincard = *min(myFHR.maincards.begin(), myFHR.maincards.end()); // min actually returns the max rank very cool
+      PlayerMove myMove = betAmountToMove(        RFHRBetRelationship[RFHR] * info->bigBlind,     info, p);
+      return myMove;
+    }
+    void FHRAwareAI::updateRFHRBetRelationship(const vector<int>& vec_in) {
+      // expected # of parameters: 13 card ranks * 9 hand ranks = 117
+      // hand rank major order
+      if( vec_in.size() != 117 ) throw;
+      for(int hr_id=0; hr_id<9; hr_id++){
+        for(int c_id=0; c_id<13; c_id++) {
+          const int v_id= hr_id*13 + c_id;
+          Card c = {static_cast<Rank>(c_id), static_cast<Suit>('X')};
+          ReducedFullHandRank r;
+          r.handrank =  static_cast<HandRank>(hr_id+1);
+          r.maincard = c;
+          this->RFHRBetRelationship[r] = vec_in[v_id];
+        }
+      }
+    }
+
+
+    PlayerMove MoveAwareAI::makeMove(shared_ptr<Table> info, const shared_ptr<Player> p) {
+      // Set me to playerID = 0
+      auto otherGuy = info->getPlayerByID(1);
+      if( info->street == 0) enemyMoves.clear();
+      if( otherGuy->getPosition() < p->getPosition()) {
+        // other guy already made a move
+        enemyMoves.emplace_back(otherGuy->move.move);
+      }
+      while( enemyMoves.size() > 2) { enemyMoves.erase(enemyMoves.begin()); } //trim to last two moves
+      auto myMove = betAmountToMove(  moveSequenceToBet[enemyMoves], info, p);
+      return myMove;
+    }
+
+    void MoveAwareAI::updateMoveSequenceToBet(const vector<int>& vec_in) {
+      // storage: F C R , CC CR RC RR
+      //map<vector<Move>, int> moveSequenceToBet;
+
+    }
+
+
+
+
+
+
+
+
+    static PlayerMove betAmountToMove(int betAmount, shared_ptr<Table>& info, const shared_ptr<Player>& p) {
       PlayerMove myMove;
-      myMove.bet_amount = streetRBR[info->street][myFHR.handrank] * info->bigBlind;
+      myMove.bet_amount = betAmount;
       clamp(myMove.bet_amount, 0, p->bankroll);
       if( myMove.bet_amount == 0 ) myMove.move = Move::MOVE_FOLD;
       else if( myMove.bet_amount == p->bankroll ) myMove.move = Move::MOVE_ALLIN;
@@ -134,6 +194,7 @@ namespace Poker {
           myMove.move = Move::MOVE_CALL;
       }
       return myMove;
+
     }
 
 
