@@ -67,7 +67,7 @@ int main() {
         std::cout << "]" << std::endl;
 
         int N = 10000;
-        double result = Poker::pyMonteCarloRounds( N,  inputRBRraw);
+        double result = Poker::pyMonteCarloGames( N,  inputRBRraw);
         std::cout << "result = " << result << std::endl;
         if( result > highestWR) {
             highestWR = result;

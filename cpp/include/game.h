@@ -2,6 +2,7 @@
 #include<memory>
 #include <list>
 #include <iostream>
+#include <fstream>
 #include "table.h"
 #include "player.h"
 #define PRINT false
@@ -20,7 +21,8 @@ namespace Poker {
             shared_ptr<Player> lastRoundWinner;
             int nRounds;
 
-
+            bool printMovesToFile = false;
+            string outFilename = "";
 
             Game() { }
             Game(const Table& t) { table = t; }
@@ -190,6 +192,7 @@ namespace Poker {
                         while (i != bettingPlayers.end()) {
                             shared_ptr<Player> P = *i;
                             PlayerMove Pmove =  P->makeMove(make_shared<Table>(table));
+                            if( printMovesToFile ) printToFile(outFilename);            // TODO: replace this with an optional callback or something?
                             const bool allIn = Pmove.move == Move::MOVE_ALLIN;
                             const bool folded = Pmove.move == Move::MOVE_FOLD;
                             
@@ -332,6 +335,31 @@ namespace Poker {
                 std::cout << "Community cards: " << table.communityCards << std::endl;
                 std::cout << "Pot: " << table.pot << std::endl;
                 std::cout << "Current Bet: " << table.minimumBet << std::endl;
+            }
+
+            void printToFile(string filename) {
+                // writes table state to a csv
+                // columns: 
+                // street, pot, current minimum bet
+                // # of players, player 0 move, player 0 bet_amount, player 1 move, player 1 bet_amount, ... 
+                ofstream myFile(filename, std::ios_base::app);
+                size_t nPlayers = bettingPlayers.size();
+                /*
+                myFile << "street,pot,minimumBet,nplayers,";
+                for(int i=0; i<nPlayers; i++ ) {
+                    myFile << "player" << this->bettingPlayers[i]->playerID << "move,";
+                    myFile << "player" << this->bettingPlayers[i]->playerID << "betAmount";
+                    if( i != nPlayers-1 ) myFile << ",";
+                }
+                myFile << std::endl;
+                */
+                myFile << this->table.street << "," << this->table.pot << "," << this->table.minimumBet << "," << nPlayers << ",";
+                for(int i=0; i<nPlayers; i++ ) {
+                    myFile << bettingPlayers[i]->move.move << "," << bettingPlayers[i]->move.bet_amount;
+                    if( i != nPlayers-1 ) myFile << ",";
+                }
+                myFile << std::endl;
+                myFile.close();
             }
 
     };

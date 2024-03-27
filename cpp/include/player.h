@@ -150,5 +150,14 @@ namespace Poker{
         stream << "Player " << a.playerID << " (" <<  PlayerPosition_to_String[a.position] << ")";
         return stream;
     }
+
+    inline std::ostream& operator<<(std::ostream& stream, Move &a) { 
+                if( a == Move::MOVE_ALLIN ) stream << "A";
+        else    if( a == Move::MOVE_CALL  ) stream << "C";
+        else    if( a == Move::MOVE_FOLD  ) stream << "F";
+        else    if( a == Move::MOVE_RAISE ) stream << "R";
+        else    if( a == Move::MOVE_UNDEF ) stream << "U";
+        return stream;
+    }
 }
 
