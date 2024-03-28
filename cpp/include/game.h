@@ -21,8 +21,10 @@ namespace Poker {
             shared_ptr<Player> lastRoundWinner;
             int nRounds;
 
-            bool printMovesToFile = false;
-            string outFilename = "";
+            bool printMovesToRecord = false;
+            map<shared_ptr<Player>, vector<PlayerMove>> moveRecord;
+            vector<Table> tableRecord;  // unintended but maybe doesnt matter: copies of Tables copy a ptr to its players, so no historical Player information can be gleaned from this object
+            // It would be cleaner to only store the information that we want, such as player bankrolls and pot sizes
 
             Game() { }
             Game(const Table& t) { table = t; }
@@ -192,13 +194,14 @@ namespace Poker {
                         while (i != bettingPlayers.end()) {
                             shared_ptr<Player> P = *i;
                             PlayerMove Pmove =  P->makeMove(make_shared<Table>(table));
-                            if( printMovesToFile ) printToFile(outFilename);            // TODO: replace this with an optional callback or something?
                             const bool allIn = Pmove.move == Move::MOVE_ALLIN;
                             const bool folded = Pmove.move == Move::MOVE_FOLD;
                             
                             // Set the new minimum bet if player raised
                             table.minimumBet = max(Pmove.bet_amount, table.minimumBet);
 
+                            if( printMovesToRecord ) moveRecord[P].emplace_back(Pmove);
+                            if( printMovesToRecord ) tableRecord.emplace_back(table);
                             
                             if( folded ) {
                                 //take their money now

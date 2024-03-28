@@ -49,7 +49,7 @@ int main() {
     //std::vector<std::string> aiList = {"fhrprop", "rand", "rand", "call", "call"};
     //monteCarloGames(20000, aiList);
 
-
+    /*
     std::random_device rd;
     std::mt19937_64 gen(rd());
     std::uniform_int_distribution<int> dis(0,10);
@@ -81,9 +81,8 @@ int main() {
     }
     std::cout << std::endl;
 
-
-
-
+*/
+    Poker::pyMonteCarloGames(1);
 
     return 0;
 }

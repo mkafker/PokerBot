@@ -3,7 +3,7 @@
 namespace Poker {
 
 
-double pyMonteCarloGames(const uint64_t& N, const std::vector<int> params);
+void pyMonteCarloGames(const uint64_t& N);
 
 double pyMonteCarloRounds(const uint64_t& N, const std::vector<int> inputRBRraw);
 }
