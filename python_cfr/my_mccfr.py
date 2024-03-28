@@ -265,7 +265,7 @@ class InformationSet():
         self.num = 0
 
     def next_strategy(self):
-        # self.strategy_sum += self.reach_pr * self.strategy
+        self.strategy_sum += self.reach_pr * self.strategy
         self.num += 1
         self.strategy_sum += self.strategy
         self.strategy = self.calc_strategy()
@@ -303,8 +303,8 @@ class InformationSet():
         #     print(self.reach_pr_sum)
         #     quit()
 
-        # strategy = self.strategy_sum / self.reach_pr_sum
-        strategy = self.strategy_sum / self.num
+        strategy = self.strategy_sum / self.reach_pr_sum
+        # strategy = self.strategy_sum / self.num
 
         # Purify to remove actions that are likely a mistake
         strategy = np.where(strategy < 0.001, 0, strategy)
@@ -417,14 +417,14 @@ def player_money_bet(action_history):
                 if action == 'c':
                     p1_temp = p2_temp
                 elif 'r' in action:
-                    p1_temp += int(action.replace('r', ''))
+                    p1_temp = p2_temp + int(action.replace('r', ''))
                 elif action == 'a':
                     p1_temp += 1
             else:
                 if action == 'c':
                     p2_temp = p1_temp
                 elif 'r' in action:
-                    p2_temp += int(action.replace('r', ''))
+                    p2_temp = p1_temp + int(action.replace('r', ''))
                 elif action == 'a':
                     p2_temp += 1
         p1_commited += p1_temp
