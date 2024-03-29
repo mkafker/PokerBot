@@ -8,13 +8,13 @@
 #include <chrono>
 #include <random>
 
-#include "..\include\card.h"
-#include "..\include\showdown.h"
-#include "..\include\table.h"
-#include "..\include\player.h"
-#include "..\include\game.h"
-#include "..\include\bench.h"
-#include "..\include\pybindings.h"
+#include "card.h"
+#include "showdown.h"
+#include "table.h"
+#include "player.h"
+#include "game.h"
+#include "bench.h"
+#include "pybindings.h"
 
 using namespace Poker;
 int main() {
@@ -59,7 +59,6 @@ int main() {
 
     for(int j = 0; j < 10; j++ ) {
         std::cout << "==========================================" << std::endl;
-        std::cout << "IM ALIVE" << std::endl;
         std::cout << "input = [";
         for(auto& i : inputRBRraw) {
             i = dis(gen);
