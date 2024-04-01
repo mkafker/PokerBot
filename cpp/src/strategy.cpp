@@ -173,7 +173,8 @@ namespace Poker {
       PlayerMove myPMove;
 
       map<BinnedPlayerMove, float> probMap;
-      std::mt19937_64 gen(info->rd);
+      std::random_device rd;
+      std::mt19937_64 gen(rd());
       std::uniform_real_distribution<float> dist(0.0f, 1.0f);
 
       auto [updatedIter, rgsWasNew] = CFRTable.try_emplace(myRGS);

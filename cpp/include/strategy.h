@@ -89,6 +89,8 @@ namespace Poker {
             void updateMoveSequenceToBet(const vector<int>& vec_in);
     };
 
+    enum class PlayerPosition;
+
     struct CFRAI1 : public Strategy {
         // Makes a probabilistic move based on a map
         // Define a few structs
@@ -105,8 +107,12 @@ namespace Poker {
                 if( this->maincard < other.maincard) return true;
                 return false;
             }
+            operator int() const {
+                return static_cast<int>(handrank) * 13 + maincard.get_rank_as_int();
+            }
         };
         enum BinnedPlayerMove {
+            Undef = -1,
             Fold = 0,
             Call = 1,
             Raise = 2,
@@ -118,7 +124,23 @@ namespace Poker {
             PlayerPosition position;
             ReducedFullHandRank RFHR;
             int street;
-            map<Player, vector<BinnedPlayerMove>> playerHistory;
+            map<PlayerPosition, vector<BinnedPlayerMove>> playerHistory;
+
+            bool operator==(const ReducedGameState& other) const {
+                return position == other.position &&
+                        int(RFHR) == int(other.RFHR) &&
+                        street == other.street &&
+                        playerHistory == other.playerHistory;
+            }
+        };
+        struct RGSHash {
+            size_t operator()(const ReducedGameState& rgs) const {
+                size_t PPHash = hash<PlayerPosition>{}(rgs.position);
+                size_t RFHRHash = hash<int>{}(int(rgs.RFHR));
+                size_t streetHash = hash<int>{}(rgs.street);
+                size_t PHHash = hash<map<PlayerPosition, vector<BinnedPlayerMove>>>{}(rgs.playerHistory);
+                return PPHash ^ (RFHRHash << 1) ^ (streetHash << 2);
+            }
         };
 
         ReducedGameState packTableIntoReducedGameState(Table table);
@@ -126,7 +148,7 @@ namespace Poker {
         PlayerMove unpackBinnedPlayerMove(BinnedPlayerMove m, int minimumBet, int bankroll);
         using Strategy::Strategy;
         PlayerMove makeMove(std::shared_ptr<Table> info, const shared_ptr<Player>) override;
-        unordered_map<ReducedGameState, map<BinnedPlayerMove, float>> CFRTable;       // Maps between the game state and probability to make each move
+        unordered_map<ReducedGameState, map<BinnedPlayerMove, float>, RGSHash> CFRTable;       // Maps between the game state and probability to make each move
     };
 
     
