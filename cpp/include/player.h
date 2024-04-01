@@ -36,6 +36,7 @@ namespace Poker{
         POS_SB   = 7,
         POS_BB   = 8,
     };
+    
 
     static std::unordered_map<PlayerPosition, std::string> PlayerPosition_to_String {
         {PlayerPosition::POS_UTG     , "UTG"},

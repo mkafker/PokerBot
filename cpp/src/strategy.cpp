@@ -172,12 +172,12 @@ namespace Poker {
       ReducedGameState myRGS = packTableIntoReducedGameState(*info);
       PlayerMove myPMove;
 
-      map<BinnedPlayerMove, float> probMap;
+      unordered_map<BinnedPlayerMove, float> probMap;
       std::random_device rd;
       std::mt19937_64 gen(rd());
       std::uniform_real_distribution<float> dist(0.0f, 1.0f);
 
-      auto [updatedIter, rgsWasNew] = CFRTable.try_emplace(myRGS);
+      auto [updatedIter, rgsWasNew] = CFRTable.try_emplace(myRGS);    // TODO: fix this
       // updatedIter is an iterator to the key corresponding to the game state
       if( not rgsWasNew ) {
         // make a random move if we don't have a policy
@@ -215,9 +215,10 @@ namespace Poker {
 
     CFRAI1::BinnedPlayerMove CFRAI1::packBinnedPlayerMove(PlayerMove m) {
       if( m.move == Move::MOVE_ALLIN ) return CFRAI1::BinnedPlayerMove::AllIn;
-      if( m.move == Move::MOVE_FOLD ) return CFRAI1::BinnedPlayerMove::Fold;
-      if( m.move == Move::MOVE_CALL ) return CFRAI1::BinnedPlayerMove::Call;
-      if( m.move == Move::MOVE_RAISE ) return CFRAI1::BinnedPlayerMove::Raise;
+      else if( m.move == Move::MOVE_FOLD ) return CFRAI1::BinnedPlayerMove::Fold;
+      else if( m.move == Move::MOVE_CALL ) return CFRAI1::BinnedPlayerMove::Call;
+      else if( m.move == Move::MOVE_RAISE ) return CFRAI1::BinnedPlayerMove::Raise;
+      else return CFRAI1::BinnedPlayerMove::Undef;
     }
 
     CFRAI1::ReducedGameState CFRAI1::packTableIntoReducedGameState(Table table) {
@@ -226,6 +227,14 @@ namespace Poker {
         // Player 0 is the special player
         shared_ptr<Player> playerZero = table.getPlayerByID(0);
         rgs.position = playerZero->getPosition();
+
+        // This could probably be moved to dealCommunityCards
+        vector<Card> pHand = playerZero->hand;
+        vector<Card> allCards = table.communityCards;
+        allCards.insert(allCards.begin(), pHand.begin(), pHand.end());
+        FullHandRank myFHR = calcFullHandRank(allCards);
+        rgs.RFHR.handrank = myFHR.handrank;
+        rgs.RFHR.maincard = *min(myFHR.maincards.begin(), myFHR.maincards.end()); // min actually returns the max rank very cool
         for( auto& p : table.playerList ) {
           rgs.playerHistory[p->getPosition()].emplace_back(packBinnedPlayerMove(p->move));
         }

@@ -111,20 +111,31 @@ namespace Poker {
                 return static_cast<int>(handrank) * 13 + maincard.get_rank_as_int();
             }
         };
-        enum BinnedPlayerMove {
+        enum class BinnedPlayerMove : int {
             Undef = -1,
             Fold = 0,
             Call = 1,
             Raise = 2,
             AllIn = 3
         };
+        struct BinnedPlayerMoveHash {
+            size_t operator()(const BinnedPlayerMove& pp) const {
+                return static_cast<size_t>(pp);
+            }
+        };
+        struct PlayerPositionHash {
+            size_t operator()(const PlayerPosition& pp) const {
+                return static_cast<size_t>(pp);
+            }
+        };
+
         struct ReducedGameState {
             // (all players)
             // Position, ReducedHandRank, street, and move history of all players
             PlayerPosition position;
             ReducedFullHandRank RFHR;
             int street;
-            map<PlayerPosition, vector<BinnedPlayerMove>> playerHistory;
+            unordered_map<PlayerPosition, vector<BinnedPlayerMove>, PlayerPositionHash> playerHistory;
 
             bool operator==(const ReducedGameState& other) const {
                 return position == other.position &&
@@ -133,13 +144,20 @@ namespace Poker {
                         playerHistory == other.playerHistory;
             }
         };
+        // Need the hash for the unordered_map
         struct RGSHash {
             size_t operator()(const ReducedGameState& rgs) const {
-                size_t PPHash = hash<PlayerPosition>{}(rgs.position);
-                size_t RFHRHash = hash<int>{}(int(rgs.RFHR));
-                size_t streetHash = hash<int>{}(rgs.street);
-                size_t PHHash = hash<map<PlayerPosition, vector<BinnedPlayerMove>>>{}(rgs.playerHistory);
-                return PPHash ^ (RFHRHash << 1) ^ (streetHash << 2);
+                size_t hash = 0;
+                hashCombine(hash, rgs.position);
+                hashCombine(hash, int(rgs.RFHR));
+                hashCombine(hash, rgs.street);
+                for(const auto& pair : rgs.playerHistory) {
+                    hashCombine(hash, pair.first);
+                    for(const auto& v : pair.second) {
+                        hashCombine(hash, v);
+                    }
+                }
+                return hash;
             }
         };
 
@@ -148,7 +166,13 @@ namespace Poker {
         PlayerMove unpackBinnedPlayerMove(BinnedPlayerMove m, int minimumBet, int bankroll);
         using Strategy::Strategy;
         PlayerMove makeMove(std::shared_ptr<Table> info, const shared_ptr<Player>) override;
-        unordered_map<ReducedGameState, map<BinnedPlayerMove, float>, RGSHash> CFRTable;       // Maps between the game state and probability to make each move
+        unordered_map<ReducedGameState, unordered_map<BinnedPlayerMove, float>, RGSHash> CFRTable;       // Maps between the game state and probability to make each move
+
+        template <typename T>
+        static void hashCombine(size_t& seed, const T& v) {
+            hash<T> hasher;
+            seed ^= hasher(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+        }
     };
 
     
