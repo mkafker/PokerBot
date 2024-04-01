@@ -20,7 +20,7 @@ namespace Poker {
 void pyMonteCarloGames(const uint64_t& N) {
     // TODO: make this take in a sequence of moves
     // Need to write a valid poker move generator with fixed move sequence length
-    vector<string> aiList = {"rand", "rand"};
+    vector<string> aiList = {"CFRAI1", "rand"};
     std::random_device rd;
     auto myTable = Table();
     // populate player list
@@ -48,7 +48,7 @@ void pyMonteCarloGames(const uint64_t& N) {
       game->setup();
       game->moveRecord.clear();
       game->tableRecord.clear();
-      game->printMovesToRecord = true;
+      game->printMovesToRecord = false;
       auto nPlayers = game->bettingPlayers.size();
       while( nPlayers > 1) {
           game->table.resetCards(rd);

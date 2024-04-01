@@ -4,6 +4,8 @@
 #include "showdown.h"
 #include <map>
 #include <memory>
+#include <random>
+#include <numeric>
 using namespace std;
 
 namespace Poker {
@@ -85,6 +87,46 @@ namespace Poker {
             map<vector<Move>, int> moveSequenceToBet;
             vector<Move> enemyMoves;
             void updateMoveSequenceToBet(const vector<int>& vec_in);
+    };
+
+    struct CFRAI1 : public Strategy {
+        // Makes a probabilistic move based on a map
+        // Define a few structs
+        struct ReducedFullHandRank  {
+            HandRank handrank = HandRank::UNDEF_HANDRANK;                  
+            Card maincard = Card();        
+            bool operator==(const ReducedFullHandRank& other) const {
+                return this->handrank == other.handrank and this->maincard == other.maincard;
+            }
+            bool operator<(const ReducedFullHandRank& other) const {
+                if( this->handrank > other.handrank) return false;
+                if( this->handrank < other.handrank) return true;
+                if( this->maincard > other.maincard) return false;
+                if( this->maincard < other.maincard) return true;
+                return false;
+            }
+        };
+        enum BinnedPlayerMove {
+            Fold = 0,
+            Call = 1,
+            Raise = 2,
+            AllIn = 3
+        };
+        struct ReducedGameState {
+            // (all players)
+            // Position, ReducedHandRank, street, and move history of all players
+            PlayerPosition position;
+            ReducedFullHandRank RFHR;
+            int street;
+            map<Player, vector<BinnedPlayerMove>> playerHistory;
+        };
+
+        ReducedGameState packTableIntoReducedGameState(Table table);
+        BinnedPlayerMove packBinnedPlayerMove(PlayerMove m);
+        PlayerMove unpackBinnedPlayerMove(BinnedPlayerMove m, int minimumBet, int bankroll);
+        using Strategy::Strategy;
+        PlayerMove makeMove(std::shared_ptr<Table> info, const shared_ptr<Player>) override;
+        unordered_map<ReducedGameState, map<BinnedPlayerMove, float>> CFRTable;       // Maps between the game state and probability to make each move
     };
 
     

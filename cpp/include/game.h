@@ -5,7 +5,7 @@
 #include <fstream>
 #include "table.h"
 #include "player.h"
-#define PRINT false
+#define PRINT true
 using namespace std;
 
 namespace Poker {

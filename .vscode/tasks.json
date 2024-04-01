@@ -7,9 +7,11 @@
             "args": [
                 "-fdiagnostics-color=always",
                 "-g",
-                "${file}",
+                "${workspaceFolder}\\cpp\\src\\*.cpp",
+                "-I",
+                "${workspaceFolder}\\cpp\\include",
                 "-o",
-                "${fileDirname}\\${fileBasenameNoExtension}.exe"
+                "${workspaceFolder}\\cpp\\a.out"
             ],
             "options": {
                 "cwd": "C:\\msys64\\ucrt64\\bin"

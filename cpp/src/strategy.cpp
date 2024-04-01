@@ -167,15 +167,89 @@ namespace Poker {
       return myMove;
     }
 
-    void MoveAwareAI::updateMoveSequenceToBet(const vector<int>& vec_in) {
-      // storage: F C R , CC CR RC RR
-      //map<vector<Move>, int> moveSequenceToBet;
+    PlayerMove CFRAI1::makeMove(shared_ptr<Table> info, const shared_ptr<Player> p) {
+      // Add this game state to the table if it doesn't exist
+      ReducedGameState myRGS = packTableIntoReducedGameState(*info);
+      PlayerMove myPMove;
 
+      map<BinnedPlayerMove, float> probMap;
+      std::mt19937_64 gen(info->rd);
+      std::uniform_real_distribution<float> dist(0.0f, 1.0f);
+
+      auto [updatedIter, rgsWasNew] = CFRTable.try_emplace(myRGS);
+      // updatedIter is an iterator to the key corresponding to the game state
+      if( not rgsWasNew ) {
+        // make a random move if we don't have a policy
+        probMap[BinnedPlayerMove::AllIn] = dist(gen);
+        probMap[BinnedPlayerMove::Raise] = dist(gen);
+        probMap[BinnedPlayerMove::Call] = dist(gen);
+        probMap[BinnedPlayerMove::Fold] = dist(gen);
+        float tot = 0.0f;
+        for_each(probMap.begin(), probMap.end(), [&tot](const pair<BinnedPlayerMove, float> pair) { 
+          tot += pair.second;
+        });
+        for_each(probMap.begin(), probMap.end(), [&tot](pair<BinnedPlayerMove, float> pair) { 
+          pair.second /= tot;
+        });
+        // insert the normalized random policy
+        CFRTable[myRGS] = probMap;
+      }
+      else {
+        // policy is already in there
+        probMap = CFRTable[myRGS];
+      }
+
+      // Sample the choices according to the prob dist
+      float choice = dist(gen);
+      float partialSum = 0.0f;
+      BinnedPlayerMove bpm;
+      vector<float> cumProbs(probMap.size());
+      for( auto& pair : probMap ) {
+        partialSum += pair.second;
+        if(partialSum >= choice) bpm = pair.first;
+      }
+
+      return unpackBinnedPlayerMove(bpm, info->minimumBet, p->bankroll);
     }
 
+    CFRAI1::BinnedPlayerMove CFRAI1::packBinnedPlayerMove(PlayerMove m) {
+      if( m.move == Move::MOVE_ALLIN ) return CFRAI1::BinnedPlayerMove::AllIn;
+      if( m.move == Move::MOVE_FOLD ) return CFRAI1::BinnedPlayerMove::Fold;
+      if( m.move == Move::MOVE_CALL ) return CFRAI1::BinnedPlayerMove::Call;
+      if( m.move == Move::MOVE_RAISE ) return CFRAI1::BinnedPlayerMove::Raise;
+    }
 
-
-
+    CFRAI1::ReducedGameState CFRAI1::packTableIntoReducedGameState(Table table) {
+        ReducedGameState rgs;
+        rgs.street = table.street;
+        // Player 0 is the special player
+        shared_ptr<Player> playerZero = table.getPlayerByID(0);
+        rgs.position = playerZero->getPosition();
+        for( auto& p : table.playerList ) {
+          rgs.playerHistory[p->getPosition()].emplace_back(packBinnedPlayerMove(p->move));
+        }
+        return rgs;
+    }
+    PlayerMove CFRAI1::unpackBinnedPlayerMove(BinnedPlayerMove m, int minimumBet, int bankroll) {
+      PlayerMove ret;
+      if(m == CFRAI1::BinnedPlayerMove::AllIn ) {
+        ret.move = Move::MOVE_ALLIN;
+        ret.bet_amount = bankroll;
+      }
+      else if(m == CFRAI1::BinnedPlayerMove::Raise ) {
+        ret.move = Move::MOVE_RAISE;
+        ret.bet_amount = minimumBet * 2;
+      }
+      else if(m == CFRAI1::BinnedPlayerMove::Call ) {
+        ret.move = Move::MOVE_CALL;
+        ret.bet_amount = minimumBet;
+      }
+      else if(m == CFRAI1::BinnedPlayerMove::Fold ) {
+        ret.move = Move::MOVE_FOLD;
+        ret.bet_amount = 0;
+      }
+      return ret;
+    }
 
 
 
