@@ -7,7 +7,7 @@
 #include <fstream>
 
 
-#define PYTHON false
+#define PYTHON true
 #if PYTHON
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
@@ -159,13 +159,58 @@ double pyMonteCarloRounds(const uint64_t& N, const std::vector<int> params) {
 }
 
 
+int pyShowdownHands(std::vector<std::tuple<int,int>> tupleIntsA, std::vector<std::tuple<int,int>> tupleIntsB, 
+                    std::vector<std::tuple<int,int>> communityTupleInts) {
+  // returns 0 if A won, 1 if B won, 2 if draw
+  vector<Card> cardsA;
+  vector<Card> cardsB;
+  vector<Card> commCardsA;
+  vector<Card> commCardsB;
+
+  auto convertCards = [] (vector<tuple<int,int>>& in, vector<Card>& out) -> void {
+    /* 
+    Charles's rank: 2-14 inclusive (A=14, 2=2)
+              suit: 1='S', 2='H', 3='D', 4='C'
+    */
+    for(auto& pair : in) {
+      Card n;
+      n.rank = static_cast<Rank>( get<0>(pair) - 2 );
+      const int charlesSuit = get<1>(pair);
+      if( charlesSuit == 1) n.suit = Suit::SPADE;
+      else if( charlesSuit == 2) n.suit = Suit::HEART;
+      else if( charlesSuit == 3) n.suit = Suit::DIAMOND;
+      else if( charlesSuit == 4) n.suit = Suit::CLUB;
+      out.emplace_back(n);
+    }
+  };
+
+  convertCards(tupleIntsA, cardsA);
+  convertCards(tupleIntsB, cardsB);
+  convertCards(communityTupleInts, commCardsA);
+  commCardsB = commCardsA;
+
+  // append community cards 
+  commCardsA.insert(commCardsA.end(), cardsA.begin(), cardsA.end());
+  commCardsB.insert(commCardsB.end(), cardsB.begin(), cardsB.end());
+
+  auto fhrA = calcFullHandRank(commCardsA);
+  auto fhrB = calcFullHandRank(commCardsB);
+  auto showdownResult = showdownFHR(fhrA, fhrB);
+  if(showdownResult == fhrA) return 0;
+  else if(showdownResult == fhrB) return 1;
+  else return 2;
+}
 
 
 #if PYTHON
-
+  /*
   PYBIND11_MODULE(poker, m) {
       m.def("MCGames", &pyMonteCarloRounds, "Monte Carlo Rounds",
           pybind11::arg("N"), pybind11::arg("inputRBRraw"));
+  }*/
+  PYBIND11_MODULE(poker, m) {
+      m.def("showdownHands", &pyShowdownHands, "showdown hands",
+          pybind11::arg("cardsA"), pybind11::arg("cardsB"), pybind11::arg("commCards"));
   }
 
 #endif

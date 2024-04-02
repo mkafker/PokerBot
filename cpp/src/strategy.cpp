@@ -239,7 +239,7 @@ namespace Poker {
         rgs.RFHR.handrank = myFHR.handrank;
         rgs.RFHR.maincard = *min(myFHR.maincards.begin(), myFHR.maincards.end()); // min actually returns the max rank very cool
         for( auto& p : table.playerList ) {
-          rgs.playerHistory[p->getPosition()].emplace_back(packBinnedPlayerMove(p->move));
+          rgs.playerHistory[p->getPosition()].push_back(packBinnedPlayerMove(p->move));
         }
         return rgs;
     }
