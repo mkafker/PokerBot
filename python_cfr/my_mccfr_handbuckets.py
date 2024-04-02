@@ -19,12 +19,6 @@ Currently this does not work. I need to write a new terminal_util function
 and also come up with some sort of MC choosing of the starting player's cards.
 Currently this is no set up to optimally save time while training.
 '''
-#######################
-# Max i_map size of 288
-#######################
-# _MAX_BET = 3
-# _BET_ROUNDS = 2
-# _HAND_BINS = 5
 
 _MAX_BET = 5 # Includes the antee of $1
 _BET_ROUNDS = 4
@@ -69,7 +63,7 @@ def main():
             print(e)
             print("Couldn't save current i_map")
 
-    expected_game_value /= _N_ITERATION
+    expected_game_value /= _N_ITERATIONS
     print("\n", expected_game_value)
 
     temp_i_map = copy.copy(i_map)
