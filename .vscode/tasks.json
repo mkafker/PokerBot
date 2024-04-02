@@ -1,24 +1,35 @@
 {
+"windows": {
+},
     "tasks": [
         {
             "type": "cppbuild",
             "label": "C/C++: g++.exe build active file",
-            "command": "C:\\msys64\\ucrt64\\bin\\g++.exe",
+            "command": "g++",
             "args": [
                 "-fdiagnostics-color=always",
                 "-g",
-                "${workspaceFolder}\\cpp\\src\\*.cpp",
+                "${workspaceFolder}/cpp/src/*.cpp",
                 "-I",
-                "${workspaceFolder}\\cpp\\include",
+                "${workspaceFolder}/cpp/include",
                 "-o",
-                "${workspaceFolder}\\cpp\\a.out"
+                "${workspaceFolder}/cpp/a.out"
             ],
-            "options": {
-                "cwd": "C:\\msys64\\ucrt64\\bin"
-            },
-            "problemMatcher": [
-                "$gcc"
-            ],
+            "windows": {
+                "command": "C:\\msys64\\ucrt64\\bin\\g++.exe",
+                "args": [
+                    "-fdiagnostics-color=always",
+                    "-g",
+                    "${workspaceFolder}\\cpp\\src\\*.cpp",
+                    "-I",
+                    "${workspaceFolder}\\cpp\\include",
+                    "-o",
+                    "${workspaceFolder}\\cpp\\a.out"
+                ],
+                "options": {
+                    "cwd": "C:\\msys64\\ucrt64\\bin"
+                },
+        },
             "group": {
                 "kind": "build",
                 "isDefault": true

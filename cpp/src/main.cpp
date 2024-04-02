@@ -82,7 +82,7 @@ int main() {
     std::cout << std::endl;
 
 */
-    Poker::pyMonteCarloGames(1);
+    Poker::pyMonteCarloGames(10);
 
     return 0;
 }

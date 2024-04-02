@@ -175,22 +175,21 @@ namespace Poker {
       unordered_map<BinnedPlayerMove, float> probMap;
       std::random_device rd;
       std::mt19937_64 gen(rd());
-      std::uniform_real_distribution<float> dist(0.0f, 1.0f);
 
-      auto [updatedIter, rgsWasNew] = CFRTable.try_emplace(myRGS);    // TODO: fix this
-      // updatedIter is an iterator to the key corresponding to the game state
-      if( not rgsWasNew ) {
+      float tot = 0.0f;
+
+      auto [updatedIter, rgsWasNew] = CFRTable.try_emplace(myRGS);
+      // rgsWasNew is true is the RGS key didn't exist in the CFR table
+      // updatedIter is an iterator to the key corresponding to the game state whether or not the insertion took place
+      if( rgsWasNew ) {
         // make a random move if we don't have a policy
+        std::uniform_real_distribution<float> dist(0.0f, 1.0f);
         probMap[BinnedPlayerMove::AllIn] = dist(gen);
         probMap[BinnedPlayerMove::Raise] = dist(gen);
         probMap[BinnedPlayerMove::Call] = dist(gen);
         probMap[BinnedPlayerMove::Fold] = dist(gen);
-        float tot = 0.0f;
         for_each(probMap.begin(), probMap.end(), [&tot](const pair<BinnedPlayerMove, float> pair) { 
           tot += pair.second;
-        });
-        for_each(probMap.begin(), probMap.end(), [&tot](pair<BinnedPlayerMove, float> pair) { 
-          pair.second /= tot;
         });
         // insert the normalized random policy
         CFRTable[myRGS] = probMap;
@@ -201,13 +200,17 @@ namespace Poker {
       }
 
       // Sample the choices according to the prob dist
+        std::uniform_real_distribution<float> dist(0.0f, tot);
       float choice = dist(gen);
       float partialSum = 0.0f;
       BinnedPlayerMove bpm;
       vector<float> cumProbs(probMap.size());
       for( auto& pair : probMap ) {
         partialSum += pair.second;
-        if(partialSum >= choice) bpm = pair.first;
+        if(partialSum >= choice) {
+          bpm = pair.first;
+          break;
+        } 
       }
 
       return unpackBinnedPlayerMove(bpm, info->minimumBet, p->bankroll);
