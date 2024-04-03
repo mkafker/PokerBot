@@ -8,6 +8,8 @@ import numpy as np
 import pickle
 import re
 
+from datetime import datetime
+
 import sys
 sys.path.append('../')
 from cpp_temp import poker as mike_poker
@@ -28,9 +30,9 @@ Currently this is no set up to optimally save time while training.
 
 _MAX_BET = 5 # Includes the antee of $1
 _BET_ROUNDS = 4
-_HAND_BINS = 5
-_NB_SIMULATION = 20
-_N_ITERATIONS = 1
+_HAND_BINS = 10
+_NB_SIMULATION = 200
+_N_ITERATIONS = 1000
 _load_previous_imap = True
 # random.seed(1)
 
@@ -72,19 +74,33 @@ def main():
         else:
             start_from = "P1"
 
-        try:
-            temp_i_map = copy.copy(i_map)
+        if i % 10 == 0:
+            
+            print(f"Avg Iteration Time: {(time.time() - start_time) / (i+1)} s, Current time: {datetime.now()}")
+
+            still_basic = 0
             for key, val in i_map.items():
-                temp_i_map[key] = [round(float(i), 3) for i in val.strategy]
-            with open("trained_model.json", 'w') as f:
-                json.dump(temp_i_map, f, default=custom_serializer, indent=4)
-            with open("trained_model.pickle", "wb") as f:
-                pickle.dump(i_map, f)
-        except Exception as e:
-            print(e)
-            print("Couldn't save current i_map")
+                actions = valid_actions(key, _MAX_BET)
+                basic_strat = [round(1 / len(actions), 2) for _ in actions]
+                actual_strat = [round(x, 2) for x in val.strategy]
+                if basic_strat == actual_strat:
+                    still_basic += 1
+
+            print(f'Ratio of basic strategies: {round(still_basic / len(i_map), 2)}')
+
+            try:
+                temp_i_map = copy.copy(i_map)
+                for key, val in i_map.items():
+                    temp_i_map[key] = [round(float(i), 3) for i in val.strategy]
+                with open("trained_model.json", 'w') as f:
+                    json.dump(temp_i_map, f, default=custom_serializer, indent=4)
+                with open("trained_model.pickle", "wb") as f:
+                    pickle.dump(i_map, f)
+            except Exception as e:
+                print(e)
+                print("Couldn't save current i_map")
         
-        print(f"Avg Iteration Time: {time.time() - start_time / (i+1)} s")
+        
 
     expected_game_value /= _N_ITERATIONS
     print("\n", expected_game_value)
@@ -580,7 +596,6 @@ def terminal_util_handbuckets(infoset_key, p1_cards, p2_cards, co_cards, player_
 
     if len(co_cards) < 5:
         new_co_cards, _ = deck.draw_random_cards(5 - len(co_cards))
-        # co_cards = sort_cards(new_co_cards + co_cards)
         co_cards = new_co_cards + co_cards
 
     winner = evaluate_winner(p1_cards, p2_cards, co_cards, action_history)
