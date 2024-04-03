@@ -35,19 +35,9 @@ int main() {
                                     Card(Rank::C_6, Suit::CLUB    ) };
                                     
 
-    //FullHandRank fun = Hand::calcFullHandRank(&straightflush);
-    //std::cout << fun.handrank << " " << fun.maincards << "| " << fun.kickers << std::endl;
 
-    std::vector<Card> myCards  = { Card(Rank::C_7, Suit::CLUB), Card(Rank::C_8, Suit::CLUB) };
     std::vector<Card> theirCards  = { Card(Rank::C_5, Suit::DIAMOND), Card(Rank::C_J, Suit::SPADE) };
 
-    //monteCarloHandRankCompare( myCards, theirCards, 0.01 );
-    //monteCarloHandRankCompare( myCards, theirCards, (uint64_t)1000000);
-    //benchmarkRounds(100000);
-    //benchmarkGames(10000);
-    //monteCarloGameStateCompare();
-    //std::vector<std::string> aiList = {"fhrprop", "rand", "rand", "call", "call"};
-    //monteCarloGames(20000, aiList);
 
     /*
     std::random_device rd;
@@ -82,7 +72,9 @@ int main() {
     std::cout << std::endl;
 
 */
-    Poker::pyMonteCarloGames(10);
+    //Poker::pyMonteCarloGames(10);
+    std::vector<Card> myCards  = { Card(Rank::C_A, Suit::CLUB), Card(Rank::C_A, Suit::HEART) };
+    monteCarloSingleHand(myCards, 5, 1, 50000);
 
     return 0;
 }
