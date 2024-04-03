@@ -140,4 +140,9 @@ namespace Poker {
             stream << a.at(i) << " ";
         return stream;
     }
+
+    inline std::ostream& operator<<(std::ostream& stream, const Rank& r) { 
+        stream << rank_to_char_map[r];
+        return stream;
+    }
 };
