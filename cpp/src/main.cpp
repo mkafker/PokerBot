@@ -73,8 +73,9 @@ int main() {
 
 */
     //Poker::pyMonteCarloGames(10);
-    std::vector<Card> myCards  = { Card(Rank::C_A, Suit::CLUB), Card(Rank::C_A, Suit::HEART) };
-    monteCarloSingleHand(myCards, 5, 1, 50000);
+    std::vector<Card> myCards  = { Card(Rank::C_4, Suit::CLUB), Card(Rank::C_2, Suit::HEART) };
+    std::vector<Card> comCards  = { Card(Rank::C_5, Suit::CLUB), Card(Rank::C_6, Suit::CLUB), Card(Rank::C_T, Suit::CLUB) };
+    monteCarloSingleHand(myCards, comCards, 1, 50000);
 
     return 0;
 }
