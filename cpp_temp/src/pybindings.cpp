@@ -158,6 +158,20 @@ double pyMonteCarloRounds(const uint64_t& N, const std::vector<int> params) {
 
 }
 
+std::vector<Card> convertCharlesToMike(std::vector<std::tuple<int,int>> in) {
+    std::vector<Card> out;
+    for(auto& pair : in) {
+      Card n;
+      n.rank = static_cast<Rank>( get<0>(pair) - 2 );
+      const int charlesSuit = get<1>(pair);
+      if( charlesSuit == 1) n.suit = Suit::SPADE;
+      else if( charlesSuit == 2) n.suit = Suit::HEART;
+      else if( charlesSuit == 3) n.suit = Suit::DIAMOND;
+      else if( charlesSuit == 4) n.suit = Suit::CLUB;
+      out.emplace_back(n);
+    }
+    return out;
+}
 
 int pyShowdownHands(std::vector<std::tuple<int,int>> tupleIntsA, std::vector<std::tuple<int,int>> tupleIntsB, 
                     std::vector<std::tuple<int,int>> communityTupleInts) {
@@ -201,6 +215,10 @@ int pyShowdownHands(std::vector<std::tuple<int,int>> tupleIntsA, std::vector<std
   else return 2;
 }
 
+double pyMCSingleHand(const std::vector<std::tuple<int,int>>& cardsA, const std::vector<std::tuple<int,int>>& commCards, const int numOtherPlayers, const uint64_t N) {
+  return monteCarloSingleHand(convertCharlesToMike(cardsA), convertCharlesToMike(commCards), numOtherPlayers, N);
+}
+
 
 #if PYTHON
   /*
@@ -211,6 +229,8 @@ int pyShowdownHands(std::vector<std::tuple<int,int>> tupleIntsA, std::vector<std
   PYBIND11_MODULE(poker, m) {
       m.def("showdownHands", &pyShowdownHands, "showdown hands",
           pybind11::arg("cardsA"), pybind11::arg("cardsB"), pybind11::arg("commCards"));
+      m.def("MCSingleHand", &pyMCSingleHand, "monte carlo single hand",
+          pybind11::arg("cards"), pybind11::arg("commCards"), pybind11::arg("numOtherPlayers"), pybind11::arg("N"));
   }
 
 #endif

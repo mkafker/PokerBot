@@ -122,6 +122,11 @@ namespace Poker {
           }
           if ( two_count == 1 ) is_pair = true;
 
+          if ( three_count > 1) {
+            std::sort(multi_three_kind_cards.begin(), multi_three_kind_cards.end());
+            multi_three_kind_cards.resize(3);
+          }
+
 
           if ( (is_three_kind && is_pair) || (is_three_kind && is_two_pair) ) {
               is_full_house = true;

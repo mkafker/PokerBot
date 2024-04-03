@@ -1,6 +1,7 @@
 import random
 import itertools
 import copy
+import time
 import math
 import json
 import numpy as np
@@ -29,7 +30,7 @@ _MAX_BET = 5 # Includes the antee of $1
 _BET_ROUNDS = 4
 _HAND_BINS = 5
 _NB_SIMULATION = 20
-_N_ITERATIONS = 10
+_N_ITERATIONS = 1
 _load_previous_imap = True
 # random.seed(1)
 
@@ -58,6 +59,7 @@ def main():
     expected_game_value = 0
 
     start_from = "P1"
+    start_time = time.time()
     for i in range(_N_ITERATIONS):
         
         expected_game_value += mccfr(i_map, start_from)
@@ -81,6 +83,8 @@ def main():
         except Exception as e:
             print(e)
             print("Couldn't save current i_map")
+        
+        print(f"Avg Iteration Time: {time.time() - start_time / (i+1)} s")
 
     expected_game_value /= _N_ITERATIONS
     print("\n", expected_game_value)
@@ -291,13 +295,36 @@ def sort_cards(cards):
     sorted_cards = sorted(list(cards), key=lambda x: (x.rank, x.suit))
     return tuple(sorted_cards)
 
+# def estimate_hand_strength(player_cards, co_cards, deck):
+#     simulation_results = []
+
+#     for i in range(_NB_SIMULATION):
+#         opponents_cards, new_deck = deck.draw_random_cards(2)
+#         new_community_cards, final_deck = new_deck.draw_random_cards(5 - len(co_cards))
+#         community_cards  = sort_cards(co_cards + new_community_cards)
+#         dummy_history = ['cc']
+#         winner = evaluate_winner(player_cards, opponents_cards, community_cards, dummy_history)
+
+#         if winner == 0: # player wins
+#             result = 1
+#         elif winner == 2: # tie
+#             result = 0.5
+#         else: # player looses
+#             result = 0
+
+#         simulation_results.append(result)
+#     average_win_rate = sum(simulation_results) / len(simulation_results)
+      
+#     return average_win_rate
+
 def estimate_hand_strength(player_cards, co_cards, deck):
     simulation_results = []
 
     for i in range(_NB_SIMULATION):
-        opponents_cards, new_deck = deck.draw_random_cards(2)
-        new_community_cards, final_deck = new_deck.draw_random_cards(5 - len(co_cards))
-        community_cards  = sort_cards(co_cards + new_community_cards)
+        cardnum = 2 + 5 - len(co_cards)
+        selected_cards = list(sorted(random.sample(list(deck.cards), cardnum)))
+        opponents_cards = tuple(selected_cards[0:2])
+        community_cards = co_cards + tuple(selected_cards[2:])
         dummy_history = ['cc']
         winner = evaluate_winner(player_cards, opponents_cards, community_cards, dummy_history)
 
@@ -312,6 +339,18 @@ def estimate_hand_strength(player_cards, co_cards, deck):
     average_win_rate = sum(simulation_results) / len(simulation_results)
       
     return average_win_rate
+
+# def estimate_hand_strength(player_cards, co_cards, deck):
+
+#     player_cards = [(card.rank, card.suit) for card in player_cards]
+#     co_cards = [(card.rank, card.suit) for card in co_cards]
+
+#     # print()
+#     # print(player_cards)
+#     # print(co_cards)
+
+#     average_win_rate = mike_poker.MCSingleHand(player_cards, co_cards, 1, _NB_SIMULATION)
+#     return average_win_rate
 
 def clamp_hand_strength(avg_win_rate):
     hand_strength = None
@@ -445,7 +484,7 @@ def chance_util(i_map, start_from, infoset_key, deck,
             co_cards = ()
 
             if start_from == "P1":
-                p1_hand_strength = clamp_hand_strength(estimate_hand_strength(p_cards, co_cards, deck))
+                p1_hand_strength = clamp_hand_strength(estimate_hand_strength(p_cards, co_cards, final_deck))
                 p1_hs_hist = str(p1_hand_strength)
                 infoset_key = f'P1;{p1_hand_strength};aa/'
                 
@@ -455,11 +494,11 @@ def chance_util(i_map, start_from, infoset_key, deck,
                                 1, 1, 1 / n_possibilities)
 
             else:
-                p2_hand_strength = clamp_hand_strength(estimate_hand_strength(p_cards, co_cards, deck))
+                p2_hand_strength = clamp_hand_strength(estimate_hand_strength(p_cards, co_cards, final_deck))
                 p2_hs_hist = str(p2_hand_strength)
                 infoset_key = f'P2;{p2_hand_strength};aa/'
                 
-                p1_hand_strength = clamp_hand_strength(estimate_hand_strength(s_cards, co_cards, deck))
+                p1_hand_strength = clamp_hand_strength(estimate_hand_strength(s_cards, co_cards, final_deck))
                 p1_hs_hist = str(p1_hand_strength)
                 p1_infoset_key = f"P1;{p1_hand_strength};aa/"
                 info_set = get_info_set(i_map, p1_infoset_key)
@@ -491,10 +530,10 @@ def chance_util(i_map, start_from, infoset_key, deck,
         new_co_cards, new_deck = deck.draw_random_cards(cards_to_draw)
         co_cards = sort_cards(new_co_cards + co_cards)
 
-        p1_hand_strength = clamp_hand_strength(estimate_hand_strength(p1_cards, co_cards, deck))
+        p1_hand_strength = clamp_hand_strength(estimate_hand_strength(p1_cards, co_cards, new_deck))
         p1_hs_hist = p1_hs_hist + "/" + str(p1_hand_strength)
 
-        p2_hand_strength = clamp_hand_strength(estimate_hand_strength(p2_cards, co_cards, deck))
+        p2_hand_strength = clamp_hand_strength(estimate_hand_strength(p2_cards, co_cards, new_deck))
         p2_hs_hist = p2_hs_hist + "/" + str(p2_hand_strength)
 
         new_infoset_key = infoset_key.split(";")
@@ -540,8 +579,9 @@ def terminal_util_handbuckets(infoset_key, p1_cards, p2_cards, co_cards, player_
     p1_commited, p2_commited = player_money_bet(action_history)
 
     if len(co_cards) < 5:
-        new_co_cards, new_deck = deck.draw_random_cards(5 - len(co_cards))
-        co_cards = sort_cards(new_co_cards + co_cards)
+        new_co_cards, _ = deck.draw_random_cards(5 - len(co_cards))
+        # co_cards = sort_cards(new_co_cards + co_cards)
+        co_cards = new_co_cards + co_cards
 
     winner = evaluate_winner(p1_cards, p2_cards, co_cards, action_history)
 
@@ -571,13 +611,12 @@ def terminal_util_handbuckets(infoset_key, p1_cards, p2_cards, co_cards, player_
 #         quit()
 
     # # Check for folding
-    # final_history = extract_actions(history[-1])
-    # if len(final_history) > 0 and final_history[-1] == 'f':
+    # if len(history) > 0 and len(history[-1]) > 0 and history[-1][-1] == 'f':
+    #     final_history = extract_actions(history[-1])
     #     if len(final_history) % 2 == 0:
     #         return 0 # Player 2 folded
     #     else:
     #         return 1 # Player 1 folded
-
 
 #     if showdown_poker(cards_1, community_cards) > showdown_poker(cards_2, community_cards):
 #         return 0 # Player 1 wins
@@ -586,28 +625,6 @@ def terminal_util_handbuckets(infoset_key, p1_cards, p2_cards, co_cards, player_
 #     else:
 #         return 2 # Tie
 
-#     # def get_best_card(cards):
-#     #     best_card = Card(-1, -1)
-#     #     for card in cards:
-#     #         if card.rank > best_card.rank:
-#     #             best_card = card
-#     #         elif card.rank == best_card.rank and card.suit > best_card.suit:
-#     #             best_card = card
-#     #     return best_card
-
-#     # # Assuming no one folded, evaluate based on high card
-#     # p1_best_card = get_best_card(cards_1)
-#     # p2_best_card = get_best_card(cards_2)
-    
-#     # if p1_best_card.rank > p2_best_card.rank:
-#     #     return 1
-#     # elif p2_best_card.rank > p1_best_card.rank:
-#     #     return 2
-#     # elif p1_best_card.rank == p2_best_card.rank:
-#     #     if p1_best_card.suit > p2_best_card.suit:
-#     #         return 1
-#     #     else:
-#     #         return 2
 
 def evaluate_winner(cards_1, cards_2, community_cards, history):
     """
@@ -627,8 +644,8 @@ def evaluate_winner(cards_1, cards_2, community_cards, history):
         raise ValueError(f"Incorrect number of community cards: {len(community_cards)}")
 
     # Check for folding
-    final_history = extract_actions(history[-1])
-    if len(final_history) > 0 and final_history[-1] == 'f':
+    if len(history) > 0 and len(history[-1]) > 0 and history[-1][-1] == 'f':
+        final_history = extract_actions(history[-1])
         if len(final_history) % 2 == 0:
             return 0 # Player 2 folded
         else:

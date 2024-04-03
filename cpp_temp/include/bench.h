@@ -11,6 +11,8 @@ namespace Poker {
   void monteCarloHandRankCompare(const std::vector<Card>& cardsA, const std::vector<Card>& cardsB, const uint64_t& N);
   void monteCarloGames(const uint64_t& N, std::vector<std::string> aiList );
 
+  double monteCarloSingleHand(const std::vector<Card>& cardsA, const int numCommCards, const int numOtherPlayers, const uint64_t N);
+  double monteCarloSingleHand(const std::vector<Card>& cardsA, const std::vector<Card>& commCards, const int numOtherPlayers, const uint64_t N);
   void monteCarloGameStateCompare();
 
 }
