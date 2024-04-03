@@ -4,10 +4,15 @@ import copy
 import math
 import json
 import numpy as np
+import pickle
 import re
 
+import sys
+sys.path.append('../')
+from cpp_temp import poker as mike_poker
+
 from helper_objects import Card, Deck
-from better_showdown import showdown_poker
+# from better_showdown import showdown_poker
 
 '''
 This is supposed to be a version of MC-CFR+ which uses some version of
@@ -24,7 +29,9 @@ _MAX_BET = 5 # Includes the antee of $1
 _BET_ROUNDS = 4
 _HAND_BINS = 5
 _NB_SIMULATION = 20
-_N_ITERATIONS = 100
+_N_ITERATIONS = 10
+_load_previous_imap = True
+# random.seed(1)
 
 def custom_serializer(obj):
     if isinstance(obj, list):
@@ -36,11 +43,21 @@ def main():
     """
     Run iterations of counterfactual regret minimization algorithm.
     """
-    i_map = {}  # map of information sets
+
+    if _load_previous_imap:
+        try:
+            with open('trained_model.pickle', 'rb') as f:
+                i_map = pickle.load(f)
+        except Exception as e:
+            print(e)
+            print("Starting from scratch")
+            i_map = {}
+    else:
+        i_map = {}  # map of information sets
+    
     expected_game_value = 0
 
     start_from = "P1"
-    random.seed(1)
     for i in range(_N_ITERATIONS):
         
         expected_game_value += mccfr(i_map, start_from)
@@ -59,6 +76,8 @@ def main():
                 temp_i_map[key] = [round(float(i), 3) for i in val.strategy]
             with open("trained_model.json", 'w') as f:
                 json.dump(temp_i_map, f, default=custom_serializer, indent=4)
+            with open("trained_model.pickle", "wb") as f:
+                pickle.dump(i_map, f)
         except Exception as e:
             print(e)
             print("Couldn't save current i_map")
@@ -282,9 +301,9 @@ def estimate_hand_strength(player_cards, co_cards, deck):
         dummy_history = ['cc']
         winner = evaluate_winner(player_cards, opponents_cards, community_cards, dummy_history)
 
-        if winner == 1: # player wins
+        if winner == 0: # player wins
             result = 1
-        elif winner == 0: # tie
+        elif winner == 2: # tie
             result = 0.5
         else: # player looses
             result = 0
@@ -526,69 +545,103 @@ def terminal_util_handbuckets(infoset_key, p1_cards, p2_cards, co_cards, player_
 
     winner = evaluate_winner(p1_cards, p2_cards, co_cards, action_history)
 
-    if winner == -1: # Tie
+    if winner == 2: # Tie
         return 0
 
     if player_id == "P1":
-        if winner == 1:
+        if winner == 0:
             return p2_commited
         else:
             return -1 * p1_commited
     if player_id == "P2":
-        if winner == 2:
+        if winner == 1:
             return p1_commited
         else:
             return -1 * p2_commited
 
+# def evaluate_winner(cards_1, cards_2, community_cards, history):
+#     """
+#     This function returns 0, 1, 2 for player 1 winning, player 2 winning
+#     or both players tieing.
+#     """
+    
+#     # Check for insufficent number of community cards
+#     if len(community_cards) < 5:
+#         print("NOT ENOUGH COMMUNITY CARD TO DETERMINE WINNER")
+#         quit()
+
+    # # Check for folding
+    # final_history = extract_actions(history[-1])
+    # if len(final_history) > 0 and final_history[-1] == 'f':
+    #     if len(final_history) % 2 == 0:
+    #         return 0 # Player 2 folded
+    #     else:
+    #         return 1 # Player 1 folded
+
+
+#     if showdown_poker(cards_1, community_cards) > showdown_poker(cards_2, community_cards):
+#         return 0 # Player 1 wins
+#     elif showdown_poker(cards_2, community_cards) > showdown_poker(cards_1, community_cards):
+#         return 1 # Player 2 wins
+#     else:
+#         return 2 # Tie
+
+#     # def get_best_card(cards):
+#     #     best_card = Card(-1, -1)
+#     #     for card in cards:
+#     #         if card.rank > best_card.rank:
+#     #             best_card = card
+#     #         elif card.rank == best_card.rank and card.suit > best_card.suit:
+#     #             best_card = card
+#     #     return best_card
+
+#     # # Assuming no one folded, evaluate based on high card
+#     # p1_best_card = get_best_card(cards_1)
+#     # p2_best_card = get_best_card(cards_2)
+    
+#     # if p1_best_card.rank > p2_best_card.rank:
+#     #     return 1
+#     # elif p2_best_card.rank > p1_best_card.rank:
+#     #     return 2
+#     # elif p1_best_card.rank == p2_best_card.rank:
+#     #     if p1_best_card.suit > p2_best_card.suit:
+#     #         return 1
+#     #     else:
+#     #         return 2
+
 def evaluate_winner(cards_1, cards_2, community_cards, history):
     """
-    This function returns 1, 2, or 0 for player 1 winning, player 2 winning
+    This function returns 0, 1, 2 for player 1 winning, player 2 winning
     or both players tieing.
     """
     
-    # Check for insufficent number of community cards
-    if len(community_cards) < 5:
-        print("NOT ENOUGH COMMUNITY CARD TO DETERMINE WINNER")
-        quit()
+    # Check for insufficent number of cards
+    if not(len(cards_1) == 2):
+        print(cards_1)
+        raise ValueError(f"Incorrect number of player 1 cards: {len(cards_1)}")
+    if not(len(cards_2) == 2):
+        print(cards_2)
+        raise ValueError(f"Incorrect number of player 2 cards: {len(cards_2)}")
+    if not(len(community_cards) == 5):
+        print(community_cards)
+        raise ValueError(f"Incorrect number of community cards: {len(community_cards)}")
 
     # Check for folding
     final_history = extract_actions(history[-1])
     if len(final_history) > 0 and final_history[-1] == 'f':
         if len(final_history) % 2 == 0:
-            return 1
+            return 0 # Player 2 folded
         else:
-            return 2
+            return 1 # Player 1 folded
+
+    cards_1 = [(card.rank, card.suit) for card in cards_1]
+    cards_2 = [(card.rank, card.suit) for card in cards_2]
+    community_cards = [(card.rank, card.suit) for card in community_cards]
+
+    result = mike_poker.showdownHands(cards_1, cards_2, community_cards)
+    return result
 
 
-    if showdown_poker(cards_1, community_cards) > showdown_poker(cards_2, community_cards):
-        return 1 # Player 1 wins
-    elif showdown_poker(cards_2, community_cards) > showdown_poker(cards_1, community_cards):
-        return 2 # Player 2 wins
-    else:
-        return 0 # Tie
-
-    # def get_best_card(cards):
-    #     best_card = Card(-1, -1)
-    #     for card in cards:
-    #         if card.rank > best_card.rank:
-    #             best_card = card
-    #         elif card.rank == best_card.rank and card.suit > best_card.suit:
-    #             best_card = card
-    #     return best_card
-
-    # # Assuming no one folded, evaluate based on high card
-    # p1_best_card = get_best_card(cards_1)
-    # p2_best_card = get_best_card(cards_2)
-    
-    # if p1_best_card.rank > p2_best_card.rank:
-    #     return 1
-    # elif p2_best_card.rank > p1_best_card.rank:
-    #     return 2
-    # elif p1_best_card.rank == p2_best_card.rank:
-    #     if p1_best_card.suit > p2_best_card.suit:
-    #         return 1
-    #     else:
-    #         return 2
 
 
 def display_results(ev, i_map):
