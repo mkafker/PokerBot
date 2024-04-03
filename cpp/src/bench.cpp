@@ -248,9 +248,6 @@ double monteCarloSingleHand(const std::vector<Card>& cardsA, const std::vector<C
         Deck newdeck(cardsUnion);
         newdeck.mersenne = g;
         newdeck.shuffle();
-        // deal community cards
-        for(short j=0; j<numCommCards; j++)
-            communityCards[j]=newdeck.pop_card();
         // deal other player's cards
         for( auto& v : otherPlayerCards ) {
             v.clear();
