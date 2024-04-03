@@ -273,8 +273,8 @@ double monteCarloSingleHand(const std::vector<Card>& cardsA, const std::vector<C
 
     std::chrono::duration<double> duration = std::chrono::steady_clock::now() - start;
     const double winRateA = double(winCountA)/N;
-    std::cout << "A winrate: " << winRateA*100.0 << "%" << std::endl;
-    std::cout << N << " hands calculated in " << duration.count() << " seconds, or " << double(N)/duration.count() << " hands/second" << std::endl;
+    //std::cout << "A winrate: " << winRateA*100.0 << "%" << std::endl;
+    //std::cout << N << " hands calculated in " << duration.count() << " seconds, or " << double(N)/duration.count() << " hands/second" << std::endl;
     return winRateA;
 }
 
