@@ -30,11 +30,11 @@ Currently this is no set up to optimally save time while training.
 
 _MAX_BET = 5 # Includes the antee of $1
 _BET_ROUNDS = 4
-_HAND_BINS = 10
-_NB_SIMULATION = 200
+_HAND_BINS = 5
+_NB_SIMULATION = 20
 _N_ITERATIONS = 1000
 _load_previous_imap = True
-# random.seed(1)
+random.seed(1)
 
 def custom_serializer(obj):
     if isinstance(obj, list):
@@ -74,7 +74,7 @@ def main():
         else:
             start_from = "P1"
 
-        if i % 10 == 0:
+        if (i+1) % 10 == 0:
             
             print(f"Avg Iteration Time: {(time.time() - start_time) / (i+1)} s, Current time: {datetime.now()}")
 
@@ -83,7 +83,7 @@ def main():
                 actions = valid_actions(key, _MAX_BET)
                 basic_strat = [round(1 / len(actions), 2) for _ in actions]
                 actual_strat = [round(x, 2) for x in val.strategy]
-                if basic_strat == actual_strat:
+                if basic_strat == actual_strat or set([1.0, 0.0]) == set(actual_strat):
                     still_basic += 1
 
             print(f'Ratio of basic strategies: {round(still_basic / len(i_map), 2)}')
@@ -543,26 +543,28 @@ def chance_util(i_map, start_from, infoset_key, deck,
             cards_to_draw = 1
         n_possibilities = math.comb(len(deck.cards), cards_to_draw)
 
-        new_co_cards, new_deck = deck.draw_random_cards(cards_to_draw)
-        co_cards = sort_cards(new_co_cards + co_cards)
+        for deal in deck.draw_a_unique_deck(cards_to_draw):
+            new_co_cards, new_deck = deal
+            #new_co_cards, new_deck = deck.draw_random_cards(cards_to_draw)
+            new_co_cards = sort_cards(new_co_cards + co_cards)
 
-        p1_hand_strength = clamp_hand_strength(estimate_hand_strength(p1_cards, co_cards, new_deck))
-        p1_hs_hist = p1_hs_hist + "/" + str(p1_hand_strength)
+            p1_hand_strength = clamp_hand_strength(estimate_hand_strength(p1_cards, new_co_cards, new_deck))
+            new_p1_hs_hist = p1_hs_hist + "/" + str(p1_hand_strength)
 
-        p2_hand_strength = clamp_hand_strength(estimate_hand_strength(p2_cards, co_cards, new_deck))
-        p2_hs_hist = p2_hs_hist + "/" + str(p2_hand_strength)
+            p2_hand_strength = clamp_hand_strength(estimate_hand_strength(p2_cards, new_co_cards, new_deck))
+            new_p2_hs_hist = p2_hs_hist + "/" + str(p2_hand_strength)
 
-        new_infoset_key = infoset_key.split(";")
-        new_infoset_key = [new_infoset_key[0]] + [p1_hs_hist] + [new_infoset_key[-1]]
-        new_infoset_key = ';'.join(new_infoset_key) + "/"
+            new_infoset_key = infoset_key.split(";")
+            new_infoset_key = [new_infoset_key[0]] + [new_p1_hs_hist] + [new_infoset_key[-1]]
+            new_infoset_key = ';'.join(new_infoset_key) + "/"
 
-        if player_id == "P2":
-            new_infoset_key = swap_players(new_infoset_key)
+            if player_id == "P2":
+                new_infoset_key = swap_players(new_infoset_key)
 
-        expected_value += mccfr(i_map, start_from, new_infoset_key, new_deck, 
-                                p1_cards, p2_cards, co_cards,
-                                p1_hs_hist, p2_hs_hist,
-                                pr_1, pr_2, pr_c * 1 / n_possibilities)
+            expected_value += mccfr(i_map, start_from, new_infoset_key, new_deck, 
+                                    p1_cards, p2_cards, new_co_cards,
+                                    new_p1_hs_hist, new_p2_hs_hist,
+                                    pr_1, pr_2, pr_c * 1 / n_possibilities)
         
         return expected_value / n_possibilities
 

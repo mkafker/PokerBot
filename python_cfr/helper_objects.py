@@ -93,13 +93,13 @@ class Deck:
         combinations = []
         remaining_deck = Deck(1, 1) # dummy deck
         remaining_deck.cards = copy.copy(self.cards)
-        while len(remaining_deck.cards) > 0:
+        while len(remaining_deck.cards) > cardnum:
             cards, remaining_deck = remaining_deck.draw_random_cards(cardnum)
             final_deck = Deck(1, 1) # dummy deck
             final_deck.cards = copy.copy(self.cards)
             for card in cards:
                 final_deck.cards.remove(card)
-            combinations.append((tuple(sorted(cards)), final_deck))
+            combinations.append((tuple(cards), final_deck))
         return combinations
 
     def draw_random_cards(self, cardnum):

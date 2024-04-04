@@ -1,0 +1,7 @@
+- 1v1, just showdown, +1 if win, -1 if lose
+- 50 people now,
+- Round robin, everyone plays each other once
+- Top 8 goes to march madness
+- End of April deadline
+- Start of May (Running in background)
+- Actual day of event will happen at the final round of calculation.
