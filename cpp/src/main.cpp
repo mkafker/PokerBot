@@ -30,8 +30,8 @@ int main() {
 
 
     std::vector<Card> theirCards  = { Card(Rank::C_5, Suit::DIAMOND), Card(Rank::C_J, Suit::SPADE) };
-    /*
     //Poker::pyMonteCarloGames(10);
+
     std::vector<Card> myCards  = { Card(Rank::C_4, Suit::CLUB), Card(Rank::C_J, Suit::HEART) };
     std::vector<Card> comCards  = { Card(Rank::C_2, Suit::HEART), 
                                     Card(Rank::C_3, Suit::CLUB), 
@@ -50,16 +50,17 @@ int main() {
             Card c1(static_cast<Rank>(i), Suit::HEART);
             Card c2(static_cast<Rank>(j), Suit::HEART);
             std::vector<Card> myCards = { c1, c2 };
-            double WR = monteCarloSingleHand(myCards, 3, 1, 5000);
+            auto a = monteCarloSingleHandStdDev(myCards, 3, 5, 5000);
+            auto WR = a[0];
+            auto var = a[1];
             std::cout << std::fixed;
             std::cout << std::setprecision(2) << std::setw(10);
-            std::cout << WR << " ";
+            std::cout << WR << " (" << var << ")";
         }
         std::cout << std::endl;
     }
-    */
 
-    monteCarloGames(10000, {"Matt", "call"});
+    //monteCarloGames(10000, {"Matt", "call"});
 
     return 0;
 }
