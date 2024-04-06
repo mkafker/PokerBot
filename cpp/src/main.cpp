@@ -30,7 +30,7 @@ int main() {
 
 
     std::vector<Card> theirCards  = { Card(Rank::C_5, Suit::DIAMOND), Card(Rank::C_J, Suit::SPADE) };
-
+    /*
     //Poker::pyMonteCarloGames(10);
     std::vector<Card> myCards  = { Card(Rank::C_4, Suit::CLUB), Card(Rank::C_J, Suit::HEART) };
     std::vector<Card> comCards  = { Card(Rank::C_2, Suit::HEART), 
@@ -57,8 +57,9 @@ int main() {
         }
         std::cout << std::endl;
     }
+    */
 
-
+    monteCarloGames(10000, {"Matt", "call"});
 
     return 0;
 }

@@ -2,6 +2,7 @@
 #include "player.h"
 #include "table.h"
 #include "showdown.h"
+#include "bench.h"
 #include <map>
 #include <memory>
 #include <random>
@@ -174,6 +175,17 @@ namespace Poker {
             seed ^= hasher(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
         }
     };
+
+
+    struct MattAI : public Strategy {
+        public:
+            using Strategy::Strategy;
+            PlayerMove makeMove(std::shared_ptr<Table> info, const shared_ptr<Player>) override;
+            std::vector<double> thresholds = {0.2, 0.7, 0.9};
+    };
+
+
+
 
     
     inline std::string getAIName(shared_ptr<Strategy> &a) { 

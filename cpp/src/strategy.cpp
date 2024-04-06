@@ -12,7 +12,6 @@ namespace Poker {
         myMove.bet_amount = clamp(myMove.bet_amount, 0, p->bankroll);
         if( myMove.bet_amount == p->bankroll) myMove.move = Move::MOVE_ALLIN;
         return myMove;
-        
     }   
 
     PlayerMove SingleMoveCallAI::makeMove(std::shared_ptr<Table> info, const shared_ptr<Player> p) {
@@ -25,8 +24,9 @@ namespace Poker {
         if( myMove.bet_amount == p->bankroll) myMove.move = Move::MOVE_ALLIN;
         return myMove;
     }   
-
+    
     PlayerMove RandomAI::makeMove(std::shared_ptr<Table> info, const shared_ptr<Player> p) {
+
         // Performs a random valid move
         auto clamp = [](int a, int b, int c) -> int { if(a<b) a=b; if(a>c) a=c; return a;};
         std::random_device dev;
@@ -280,6 +280,36 @@ namespace Poker {
         else
           myMove.move = Move::MOVE_CALL;
       }
+      return myMove;
+
+    }
+
+
+    PlayerMove MattAI::makeMove(std::shared_ptr<Table> info, const shared_ptr<Player> p) {
+      int numOtherPlayers = info->playerList.size() - 1;
+      const double foldCallThres = thresholds[0];
+      const double callRaiseThres = thresholds[1];
+      const double raiseAllinThres = thresholds[2];
+      double matt = monteCarloSingleHand(p->hand, info->communityCards, numOtherPlayers, 100);
+      //std::cout << "MATT SAYS: " << matt << std::endl;
+      PlayerMove myMove;
+      if( matt > callRaiseThres and matt < raiseAllinThres )
+        myMove.move = Move::MOVE_RAISE;
+      else if( matt > raiseAllinThres )
+        myMove.move = Move::MOVE_ALLIN;
+      else if( matt < callRaiseThres and matt > foldCallThres )
+        myMove.move = Move::MOVE_CALL;
+      else 
+        myMove.move = Move::MOVE_FOLD;
+
+
+      if( myMove.move == Move::MOVE_FOLD) myMove.bet_amount = 0;
+      else if( myMove.move == Move::MOVE_CALL) myMove.bet_amount = info->minimumBet;
+      else if( myMove.move == Move::MOVE_RAISE) myMove.bet_amount = info->minimumBet * 2;
+      else if( myMove.move == Move::MOVE_ALLIN) myMove.bet_amount = p->bankroll;
+      myMove.bet_amount = clamp(myMove.bet_amount, 0, p->bankroll);
+      if( myMove.bet_amount == p->bankroll) myMove.move = Move::MOVE_ALLIN;
+
       return myMove;
 
     }

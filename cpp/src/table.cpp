@@ -40,6 +40,8 @@ namespace Poker {
                     guy->strategy = make_shared<FHRAwareAI>();
             else if (s == "CFRAI1")
                     guy->strategy = make_shared<CFRAI1>();
+            else if (s == "Matt")
+                    guy->strategy = make_shared<MattAI>();
             else    guy->strategy = make_shared<RandomAI>();        // default = random moves
             guy->setPosition(playerPositionList[n]);
             guy->playerID = n;

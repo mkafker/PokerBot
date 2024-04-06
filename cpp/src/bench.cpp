@@ -230,7 +230,6 @@ double monteCarloSingleHand(const std::vector<Card>& cardsA, const int numCommCa
 
 double monteCarloSingleHand(const std::vector<Card>& cardsA, const std::vector<Card>& commCards, const int numOtherPlayers, const uint64_t N) {
     std::random_device rd;
-
     uint64_t winCountA = 0;
     std::vector<std::vector<Card>> otherPlayerCards(numOtherPlayers);
 
