@@ -57,8 +57,8 @@ namespace Poker {
 
 
 
-    inline void sortCards(std::vector<Card> h);
-    inline void sortCardsDescending(std::vector<Card> h);
+    inline void sortCards(std::vector<Card>& h);
+    inline void sortCardsDescending(std::vector<Card>& h);
 
     const FullHandRank calcFullHandRank(const std::vector<Card>& hand_in);
 

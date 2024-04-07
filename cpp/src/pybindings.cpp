@@ -7,7 +7,7 @@
 #include <fstream>
 
 
-#define PYTHON false
+#define PYTHON true
 #if PYTHON
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
