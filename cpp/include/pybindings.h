@@ -5,8 +5,8 @@ namespace Poker {
 
 void pyMonteCarloGames(const uint64_t& N);
 
-double pyMonteCarloRounds(const uint64_t& N, const std::vector<int> inputRBRraw);
 
+double pyMonteCarloRounds(const uint64_t& N, std::vector<std::tuple<std::string, std::vector<int>>> aiInfo);
 
 double pyMCSingleHand(const std::vector<std::tuple<int,int>>& cardsA, const std::vector<std::tuple<int,int>>& commCards, const int numOtherPlayers, const uint64_t N);
 

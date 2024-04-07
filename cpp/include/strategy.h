@@ -17,6 +17,14 @@ namespace Poker {
     struct Strategy {
         public:
             virtual PlayerMove makeMove(const std::shared_ptr<Table>, const shared_ptr<Player>);
+            template<typename... Args>
+                void updateParameters(Args&&... args) {
+                    updateParametersImpl(std::forward<Args>(args)...);
+                }
+        private:
+            virtual void updateParametersImpl() {};
+            template<typename... Args>
+                void updateParametersImpl(Args...) {};
     };
     struct RandomAI : public Strategy {
         public:

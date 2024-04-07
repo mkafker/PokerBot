@@ -128,10 +128,10 @@ namespace Poker{
             Player(PlayerPosition p);
             Player(int p, int playerID);
 
-            const PlayerPosition& getPosition() const { return this->position; };
+            const PlayerPosition getPosition() const { return this->position; };
             void setPosition(const int& pos) { this->position = static_cast<PlayerPosition>(pos); }
             void setPosition(const PlayerPosition &p) { this->position = p; }
-            const int& getPlayerID() const { return this->playerID; }
+            const int getPlayerID() const { return this->playerID; }
             void setPlayerID(const int& id) { this->playerID = id; }
             void resetHand();
             inline bool isBankrupt();

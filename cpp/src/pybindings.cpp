@@ -5,9 +5,10 @@
 #include "table.h"
 #include <chrono>
 #include <fstream>
+#include <cassert>
 
 
-#define PYTHON true
+#define PYTHON false
 #if PYTHON
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
@@ -18,8 +19,6 @@ namespace Poker {
 
 
 void pyMonteCarloGames(const uint64_t& N) {
-    // TODO: make this take in a sequence of moves
-    // Need to write a valid poker move generator with fixed move sequence length
     vector<string> aiList = {"CFRAI1", "rand"};
     std::random_device rd;
     auto myTable = Table();
@@ -102,20 +101,27 @@ void pyMonteCarloGames(const uint64_t& N) {
 }
 
 
-double pyMonteCarloRounds(const uint64_t& N, const std::vector<int> params) {
-    // input: N games
-    // params vectorized rank-bet-street relationship map, indexed by street first. size() must be divisible by numStreets=4
-    // 
+double pyMonteCarloRounds(const uint64_t& N, std::vector<std::tuple<std::string, std::vector<int>>> aiInfo) {
+    // input: N games, vector of tuples ( Ai type string, ai parameters )
+
+    // Create Table and fill AI List
+    auto myTable = Table();
+    // unpack AI list
+    std::vector<string> aiStrings;
+    std::vector<std::vector<int>> aiParams;
+    for(auto& pair : aiInfo) {
+      aiStrings.emplace_back(std::get<0>(pair));
+      aiParams.emplace_back(std::get<1>(pair));
+    }
+    myTable.setPlayerList(aiStrings);
+    for( int i=0; i<aiStrings.size(); i++ ) {
+      // Table is filled according to same order as aiStrings
+      auto p = myTable.getPlayerByID(i);
+      p->strategy->updateParameters(aiParams[i]);
+    }
 
     // now begin games part
-    vector<string> aiList = {"fhraware", "call"};
     std::random_device rd;
-    auto myTable = Table();
-    // populate player list
-    myTable.setPlayerList(aiList);
-    auto playerZero = myTable.getPlayerByID(0);
-    //std::dynamic_pointer_cast<HandStreetAwareAI>(playerZero->strategy)->streetRBR = strategyRel;
-    std::dynamic_pointer_cast<FHRAwareAI>(playerZero->strategy)->updateRFHRBetRelationship(params);
     // set blind amounts
     myTable.bigBlind = 10;
     myTable.smallBlind = 5;
@@ -129,6 +135,8 @@ double pyMonteCarloRounds(const uint64_t& N, const std::vector<int> params) {
     auto start = std::chrono::steady_clock::now();
     int iN = 0;
     while( iN < N ) {
+      // Resets game, does a single round, tallies winnings
+      // Does not change player positions
       game->table.setPlayerBankrolls(startingCash);
       game->setup();
       game->table.resetCards(rd);
@@ -149,11 +157,6 @@ double pyMonteCarloRounds(const uint64_t& N, const std::vector<int> params) {
     const double NTimesStartingCash = double(N)*double(startingCash);
     const double avgReturn = (double(playerIDWinnings[0]) - NTimesStartingCash)/NTimesStartingCash * 100.0;
     std::cout << "Return: " << avgReturn << "%" <<  std::endl;
-    std::cout << "f = [";
-    for(auto& i : params) {
-      std::cout << i << ", ";
-    }
-    std::cout << "]" << std::endl;
     return avgReturn;
 
 }
