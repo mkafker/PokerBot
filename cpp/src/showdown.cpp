@@ -19,10 +19,10 @@ namespace Poker {
   }
 
 
-   void sortCards(std::vector<Card> h) {
+   void sortCards(std::vector<Card>& h) {
           std::sort(h.begin(), h.end(), [](const Card& a, const Card& b) { return a<b; });
   }
-   void sortCardsDescending(std::vector<Card> h) {
+   void sortCardsDescending(std::vector<Card>& h) {
           std::sort(h.begin(), h.end(), [](const Card& a, const Card& b) { return a>b; });
   }
 
@@ -117,13 +117,13 @@ namespace Poker {
 
           if ( two_count >= 2 ) {
               is_two_pair = true;
-              std::sort(multi_pair_cards.begin(), multi_pair_cards.end());
+              sortCardsDescending(multi_pair_cards);
               multi_pair_cards.resize(4);     // trims low valued pairs
           }
           if ( two_count == 1 ) is_pair = true;
 
           if ( three_count > 1) {
-            std::sort(multi_three_kind_cards.begin(), multi_three_kind_cards.end());
+            sortCardsDescending(multi_three_kind_cards);
             multi_three_kind_cards.resize(3);
           }
 
@@ -152,8 +152,6 @@ namespace Poker {
 
           // get kicker cards
 
-          auto ascendingComparator = [](const Card& a, const Card& b) { return a<b; };
-          auto descendingComparator = [](const Card& a, const Card& b) { return a>b; };
 
           // TODO: check if this works now. and benchmark it against the impl below
           //std::set_difference( cards.begin(), cards.end(), winningCards.begin(), winningCards.end(), std::back_inserter(kickerCards) , ascendingComparator);
@@ -170,8 +168,8 @@ namespace Poker {
               if( addCard ) kickerCards.emplace_back(*itCards);
               itCards++;
           }
-          std::sort(kickerCards.begin(), kickerCards.end(), descendingComparator);
-          std::sort(winningCards.begin(), winningCards.end(), descendingComparator);
+          sortCardsDescending(kickerCards);
+          sortCardsDescending(winningCards);
 
           ret.kickers = kickerCards;
           ret.maincards = winningCards;

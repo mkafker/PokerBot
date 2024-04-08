@@ -2,6 +2,7 @@
 #include "player.h"
 #include "table.h"
 #include "showdown.h"
+#include "bench.h"
 #include <map>
 #include <memory>
 #include <random>
@@ -16,6 +17,13 @@ namespace Poker {
     struct Strategy {
         public:
             virtual PlayerMove makeMove(const std::shared_ptr<Table>, const shared_ptr<Player>);
+            template<typename... Args>
+                void updateParameters(Args&&... args) {
+                    updateParametersImpl(std::forward<Args>(args)...);
+                }
+        private:
+            template<typename... Args>
+                void updateParametersImpl(Args...) {};
     };
     struct RandomAI : public Strategy {
         public:
@@ -86,7 +94,6 @@ namespace Poker {
             PlayerMove makeMove(std::shared_ptr<Table> info, const shared_ptr<Player>) override;
             map<vector<Move>, int> moveSequenceToBet;
             vector<Move> enemyMoves;
-            void updateMoveSequenceToBet(const vector<int>& vec_in);
     };
 
     enum class PlayerPosition;
@@ -174,6 +181,19 @@ namespace Poker {
             seed ^= hasher(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
         }
     };
+
+
+    struct MattAI : public Strategy {
+        public:
+            using Strategy::Strategy;
+            PlayerMove makeMove(std::shared_ptr<Table> info, const shared_ptr<Player>) override;
+            std::vector<double> thresholds = {0.2, 0.7, 0.9};
+      private:
+            void updateParametersImpl(std::vector<double>);
+    };
+
+
+
 
     
     inline std::string getAIName(shared_ptr<Strategy> &a) { 
