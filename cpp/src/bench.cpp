@@ -5,6 +5,7 @@
 #include "game.h"
 #include "strategy.h"
 #include <chrono>
+#include <any>
 
 namespace Poker {
   void benchmarkHandRankCalculator() {
@@ -23,13 +24,6 @@ namespace Poker {
           for(short j=0; j<7; j++)
               cards[j]=newdeck.pop_card();
           FullHandRank FHR = calcFullHandRank(cards);
-          /*
-          if( iT == 1000) {
-              iT = 0;
-                  std::cout << FHR.handrank << " " << FHR.maincards << "| " << FHR.kickers << std::endl;
-
-          }
-          */
           if( iN == 0 ) lastHand = FHR;
           else {
               if( showdownFHR(lastHand, FHR) == FHR  )    { 
@@ -37,62 +31,26 @@ namespace Poker {
               }
           }   
       }
-
       std::chrono::duration<double> duration = std::chrono::steady_clock::now() - start;
       std::cout << "Best hand: " << std::endl;
       std::cout << lastHand.handrank << " " << lastHand.maincards << "| " << lastHand.kickers << std::endl;
       std::cout << N << " hands calculated in " << duration.count() << " seconds, or " << double(N)/duration.count() << " hands/second" << std::endl;
   }
   void benchmarkRounds(uint64_t N) {
-      auto start = std::chrono::steady_clock::now();
-      std::shared_ptr<Player> bestPlayer;
-      int iT = 0;
-      auto game = std::make_shared<Game>();
-      for(int iN = 0; iN < N; iN++) {
-          game->resetToDefaults();
-          game->doRound();
-          std::shared_ptr<Player> winningPlayer = game->lastRoundWinner;
-          if( iN == 0 ) bestPlayer = winningPlayer;
-          // Skip if there wasn't a winner (everyone folded for some reason)
-          if( winningPlayer ) {
-            auto winFHR = winningPlayer->FHR;
-            auto bestFHR = bestPlayer->FHR;
-            if( showdownFHR(bestFHR, winFHR) == winFHR )  {
-                bestPlayer = std::move(winningPlayer);
-            }
-          }
-      }
-
-      std::chrono::duration<double> duration = std::chrono::steady_clock::now() - start;
-      std::cout << "Best hand: " << std::endl;
-      std::cout << "Player " << bestPlayer->playerID  << " " << PlayerPosition_to_String[bestPlayer->getPosition()]
-                << " " << bestPlayer->FHR.handrank << " " << bestPlayer->FHR.maincards << "| " << bestPlayer->FHR.kickers << std::endl;
-      std::cout << N << " rounds calculated in " << duration.count() << " seconds, or " << double(N)/duration.count() << " rounds/second" << std::endl;
-  }
-  void benchmarkGames(uint64_t N) {
-      std::random_device rd;
-      vector<string> aiList = {"call", "random", "random", "random", "call", "random", "call"};
-      auto start = std::chrono::steady_clock::now();
-      int iT = 0;
-      int totalRounds = 0;
-      auto game = std::make_shared<Game>();
-      for(int iN = 0; iN < N; iN++) {
-            auto table = game->table;
-            table.setPlayerList(aiList);
-            // set blinds 
-            table.bigBlind     = 10;
-            table.smallBlind   = 5;
-            table.resetCards(rd);
-            // set all players to active and betting
-            game->activePlayers = table.getPlayersInBettingOrder();
-            game->bettingPlayers = game->activePlayers;
-            game->doGame();
-            totalRounds+=game->nRounds;
-      }
-
-      std::chrono::duration<double> duration = std::chrono::steady_clock::now() - start;
-      std::cout << N << " games (" << totalRounds << " rounds) calculated in " << duration.count() << " seconds, or " 
-      << double(N)/duration.count() << " games/s (" << double(totalRounds)/duration.count() << " rounds/s)" << std::endl;
+    auto params = std::multimap<std::string, std::vector<std::any>>();
+    params.emplace("call", std::vector<std::any>{});
+    params.emplace("call", std::vector<std::any>{});
+    params.emplace("call", std::vector<std::any>{});
+    params.emplace("random", std::vector<std::any>{});
+    params.emplace("random", std::vector<std::any>{});
+    params.emplace("random", std::vector<std::any>{});
+    auto start = std::chrono::steady_clock::now();
+    monteCarloRounds(N, params);
+    std::chrono::duration<double> duration = std::chrono::steady_clock::now() - start;
+    //std::cout << "Best hand: " << std::endl;
+    //std::cout << "Player " << bestPlayer->playerID  << " " << PlayerPosition_to_String[bestPlayer->getPosition()]
+    //        << " " << bestPlayer->FHR.handrank << " " << bestPlayer->FHR.maincards << "| " << bestPlayer->FHR.kickers << std::endl;
+    std::cout << N << " rounds calculated in " << duration.count() << " seconds, or " << double(N)/duration.count() << " rounds/second" << std::endl;
   }
 
 void monteCarloGameStateCompare() {
@@ -126,12 +84,86 @@ void monteCarloGameStateCompare() {
     game->doRound();
 }
 
-
-void monteCarloGames(const uint64_t& N, vector<string> aiList) {
-    std::random_device rd;
+std::tuple<double, double> monteCarloRounds(const uint64_t& N, const std::multimap<std::string, std::vector<std::any>>& aiInfo) {
+    // input: N games, vector of tuples ( Ai type string, ai parameters )
+    // Returns (avg win rate, variance of win rate) of player 0
+    // Create Table and fill AI List
     auto myTable = Table();
-    // populate player list
-    myTable.setPlayerList(aiList);
+    // unpack AI list
+    std::vector<string> aiStrings;
+    std::vector<std::vector<std::any>> aiParams;
+    for(auto& pair : aiInfo) {
+      aiStrings.emplace_back(std::get<0>(pair));
+      aiParams.emplace_back(std::get<1>(pair));
+    }
+    myTable.setPlayerList(aiStrings);
+    for( int i=0; i<aiStrings.size(); i++ ) {
+      // Table is filled according to same order as aiStrings
+      auto p = myTable.getPlayerByID(i);
+      p->strategy->updateParameters(aiParams[i]);
+    }
+
+    // now begin games part
+    std::random_device rd;
+    // set blind amounts
+    myTable.bigBlind = 10;
+    myTable.smallBlind = 5;
+
+    auto game = std::make_shared<Game>(myTable);
+    vector<int> pZeroWinnings (N);
+    int startingCash = 100;
+
+    auto start = std::chrono::steady_clock::now();
+    int iN = 0;
+    while( iN < N ) {
+      // Resets game, does a single round, tallies winnings
+      // Does not change player positions
+      game->table.setPlayerBankrolls(startingCash);
+      game->setup();
+      game->table.resetCards(rd);
+      game->doRound();  
+      iN++;
+      pZeroWinnings[iN] = (game->table.getPlayerByID(0)->bankroll - startingCash)/myTable.bigBlind; // dimensionless winnings
+    }
+
+    std::chrono::duration<double> duration = std::chrono::steady_clock::now() - start;
+    //std::cout << N << " games (" << totalRounds << " rounds) calculated in " << duration.count() << " seconds, or " 
+    //<< double(N)/duration.count() << " games/s (" << double(totalRounds)/duration.count() << " rounds/s)" << std::endl;
+    //std::cout << N << " rounds calculated in " << duration.count() << " seconds, or " << double(N)/duration.count() << " rounds/s" << std::endl;
+    //std::cout << "Player 0 wins: " << playerIDWinCount[0] << std::endl;
+    double avgReturn = 0.0;
+    for( const auto& w : pZeroWinnings )
+        avgReturn += w;
+    avgReturn /= N;
+    double sigmaReturn = 0.0;
+    for( const auto& w : pZeroWinnings ) {
+        const auto tmp = double(w) - avgReturn;
+        sigmaReturn += tmp*tmp;
+    }
+    sigmaReturn /= N;
+    sigmaReturn = sqrt(sigmaReturn);
+    std::cout << "Return: " << avgReturn << " (" << sqrt(sigmaReturn) << ")" << std::endl;
+    return std::make_tuple(avgReturn, sigmaReturn);
+}
+
+
+std::tuple<double, double> monteCarloGames(const uint64_t& N, const std::multimap<std::string, std::vector<std::any>>& aiInfo) {
+    // Create Table and fill AI List
+    auto myTable = Table();
+    // unpack AI list
+    std::vector<string> aiStrings;
+    std::vector<std::vector<std::any>> aiParams;
+    for(auto& pair : aiInfo) {
+      aiStrings.emplace_back(std::get<0>(pair));
+      aiParams.emplace_back(std::get<1>(pair));
+    }
+    myTable.setPlayerList(aiStrings);
+    for( int i=0; i<aiStrings.size(); i++ ) {
+      // Table is filled according to same order as aiStrings
+      auto p = myTable.getPlayerByID(i);
+      p->strategy->updateParameters(aiParams[i]);
+    }
+    std::random_device rd;
     // set blind amounts
     myTable.bigBlind = 10;
     myTable.smallBlind = 5;
@@ -139,22 +171,17 @@ void monteCarloGames(const uint64_t& N, vector<string> aiList) {
     auto game = std::make_shared<Game>(myTable);
 
     // setup some statistics
-    std::vector<shared_ptr<Player>> winners;
-    //winners.resize(N);
-    unordered_map<PlayerPosition, int> posWinCount;
-    unordered_map<int, int> playerIDWinCount;
-    //unordered_map<string, int> aiWinCount;
+    vector<int> pZeroWinnings (N);
 
     auto start = std::chrono::steady_clock::now();
     int iT = 0;
     int totalRounds = 0;
+    const int startingCash = 100;
     for(int iN = 0; iN < N; iN++) {
-        game->table.setPlayerBankrolls(100);
+        game->table.setPlayerBankrolls(startingCash);
         game->setup();
         game->doGame();
-        if( game->lastRoundWinner ) {
-            winners.emplace_back(game->lastRoundWinner);
-        }
+        pZeroWinnings[iN] = (game->table.getPlayerByID(0)->bankroll - startingCash)/myTable.bigBlind; // dimensionless winnings
         totalRounds+=game->nRounds;
     }
 
@@ -162,70 +189,23 @@ void monteCarloGames(const uint64_t& N, vector<string> aiList) {
     //std::cout << N << " games (" << totalRounds << " rounds) calculated in " << duration.count() << " seconds, or " 
     //<< double(N)/duration.count() << " games/s (" << double(totalRounds)/duration.count() << " rounds/s)" << std::endl;
 
-    for( const auto& winner : winners ) {
-            posWinCount[winner->position]++;
-            playerIDWinCount[winner->playerID]++;
-            //aiWinCount[getAIName(winner->strategy)]++;
+    double avgReturn = 0.0;
+    for( const auto& w : pZeroWinnings )
+        avgReturn += w;
+    avgReturn /= N;
+    double sigmaReturn = 0.0;
+    for( const auto& w : pZeroWinnings ) {
+        const auto tmp = double(w) - avgReturn;
+        sigmaReturn += tmp*tmp;
     }
-    for( const auto& pair : posWinCount) {
-        std::cout << PlayerPosition_to_String[pair.first] << ": " << pair.second << " wins" << std::endl;
-    }
-    for( const auto& pair : playerIDWinCount) {
-        std::cout << "Player " << pair.first << ": " << pair.second << " wins" << std::endl;
-    }
-    //for( const auto& pair : aiWinCount) {
-    //    std::cout << "Player " << pair.first << ": " << pair.second << " wins" << std::endl;
-    //}
+    sigmaReturn /= N;
+    sigmaReturn = sqrt(sigmaReturn);
+    std::cout << "Return: " << avgReturn << " (" << sigmaReturn << ")" << std::endl;
+    return std::make_tuple(avgReturn, sigmaReturn);
 }
 
 
-
-double monteCarloSingleHand(const std::vector<Card>& cardsA, const int numCommCards, const int numOtherPlayers, const uint64_t N) {
-    std::random_device rd;
-
-    uint64_t winCountA = 0;
-    std::vector<std::vector<Card>> otherPlayerCards(numOtherPlayers);
-    
-    auto start = std::chrono::steady_clock::now();
-    winCountA = 0;
-    for(int iN = 0; iN < N; iN++) {
-        std::mt19937_64 g(rd());
-        std::vector<Card> communityCards(numCommCards);
-        std::vector<Card> cardsAMutable(cardsA);
-        //make new deck without players' cards
-        Deck newdeck(cardsA);
-        newdeck.mersenne = g;
-        newdeck.shuffle();
-        // deal community cards
-        for(short j=0; j<numCommCards; j++)
-            communityCards[j]=newdeck.pop_card();
-        // deal other player's cards
-        for( auto& v : otherPlayerCards ) {
-            v.clear();
-            v.emplace_back( newdeck.pop_card() );
-            v.emplace_back( newdeck.pop_card() );
-            v.insert(v.end(), communityCards.begin(), communityCards.end());
-        }
-        cardsAMutable.insert(cardsAMutable.end(), communityCards.begin(), communityCards.end());
-
-        const FullHandRank fhrA = calcFullHandRank(cardsAMutable);
-        bool aWins = true;
-        for(auto& v : otherPlayerCards) {
-            auto otherGuyFHR = calcFullHandRank(v);
-            auto showdownResult = showdownFHR(fhrA, otherGuyFHR);
-            if( showdownResult == otherGuyFHR ) aWins = false;
-        }
-        
-        if( aWins ) winCountA++;
-    }
-
-    std::chrono::duration<double> duration = std::chrono::steady_clock::now() - start;
-    const double winRateA = double(winCountA)/N;
-    //std::cout << "A winrate: " << winRateA*100.0 << "%" << std::endl;
-    //std::cout << N << " hands calculated in " << duration.count() << " seconds, or " << double(N)/duration.count() << " hands/second" << std::endl;
-    return winRateA;
-}
-std::vector<double> monteCarloSingleHandStdDev(const std::vector<Card>& cardsA, const int numCommCards, const int numOtherPlayers, const uint64_t N) {
+std::tuple<double,double> monteCarloSingleHand(const std::vector<Card>& cardsA, const int numCommCards, const int numOtherPlayers, const uint64_t N) {
     std::random_device rd;
     std::vector<short> outcomes(N, 0);
 
@@ -272,21 +252,19 @@ std::vector<double> monteCarloSingleHandStdDev(const std::vector<Card>& cardsA, 
     const double winRateA = double(winCountA)/N;
     //std::cout << "A winrate: " << winRateA*100.0 << "%" << std::endl;
     //std::cout << N << " hands calculated in " << duration.count() << " seconds, or " << double(N)/duration.count() << " hands/second" << std::endl;
-    vector<double> ret(2);
-    double var = 0.0;
-    ret[0] = winRateA;
+    double sigma = 0.0;
     for(auto& e : outcomes)
     {
-        var += (e - winRateA)*(e - winRateA);
+        sigma += (e - winRateA)*(e - winRateA);
     }
-    var /= N;
-    ret[1] = var;
-    return ret;
+    sigma /= N;
+    sigma = sqrt(sigma);
+    return std::make_tuple(winRateA, sigma);
 }
 
 
 
-std::vector<double> monteCarloSingleHandStdDev(const std::vector<Card>& cardsA, const std::vector<Card>& commCards, const int numOtherPlayers, const uint64_t N) {
+std::tuple<double,double> monteCarloSingleHand(const std::vector<Card>& cardsA, const std::vector<Card>& commCards, const int numOtherPlayers, const uint64_t N) {
     // returns Avg win rate and standard deviation
     std::vector<short> outcomes(N, 0);
     std::random_device rd;
@@ -334,62 +312,17 @@ std::vector<double> monteCarloSingleHandStdDev(const std::vector<Card>& cardsA, 
     const double winRateA = double(winCountA)/N;
     //std::cout << "A winrate: " << winRateA*100.0 << "%" << std::endl;
     //std::cout << N << " hands calculated in " << duration.count() << " seconds, or " << double(N)/duration.count() << " hands/second" << std::endl;
-    vector<double> ret(2);
-    double var = 0.0;
-    ret[0] = winRateA;
-    for(auto& e : outcomes)
-    {
-        var += (e - winRateA)*(e - winRateA);
-    }
-    var /= N;
-    ret[1] = var;
-    return ret;
-}
-
-double monteCarloSingleHand(const std::vector<Card>& cardsA, const std::vector<Card>& commCards, const int numOtherPlayers, const uint64_t N) {
-    std::random_device rd;
-    uint64_t winCountA = 0;
-    std::vector<std::vector<Card>> otherPlayerCards(numOtherPlayers);
-
-    std::vector<Card> cardsUnion (cardsA);
-    cardsUnion.insert(cardsUnion.end(), commCards.begin(), commCards.end());
-    
-    auto start = std::chrono::steady_clock::now();
-    winCountA = 0;
-    for(int iN = 0; iN < N; iN++) {
-        std::mt19937_64 g(rd());
-        std::vector<Card> communityCards(commCards);
-        const size_t numCommCards = commCards.size();
-        std::vector<Card> cardsAMutable(cardsA);
-        //make new deck without players' cards
-        Deck newdeck(cardsUnion);
-        newdeck.mersenne = g;
-        newdeck.shuffle();
-        // deal other player's cards
-        for( auto& v : otherPlayerCards ) {
-            v.clear();
-            v.emplace_back( newdeck.pop_card() );
-            v.emplace_back( newdeck.pop_card() );
-            v.insert(v.end(), communityCards.begin(), communityCards.end());
-        }
-        cardsAMutable.insert(cardsAMutable.end(), communityCards.begin(), communityCards.end());
-
-        const FullHandRank fhrA = calcFullHandRank(cardsAMutable);
-        bool aWins = true;
-        for(auto& v : otherPlayerCards) {
-            auto otherGuyFHR = calcFullHandRank(v);
-            auto showdownResult = showdownFHR(fhrA, otherGuyFHR);
-            if( showdownResult == otherGuyFHR ) aWins = false;
-        }
-        
-        if( aWins ) winCountA++;
-    }
-
-    std::chrono::duration<double> duration = std::chrono::steady_clock::now() - start;
     const double winRateA = double(winCountA)/N;
     //std::cout << "A winrate: " << winRateA*100.0 << "%" << std::endl;
     //std::cout << N << " hands calculated in " << duration.count() << " seconds, or " << double(N)/duration.count() << " hands/second" << std::endl;
-    return winRateA;
+    double sigma = 0.0;
+    for(auto& e : outcomes)
+    {
+        sigma += (e - winRateA)*(e - winRateA);
+    }
+    sigma /= N;
+    sigma = sqrt(sigma);
+    return std::make_tuple(winRateA, sigma);
 }
 
   void monteCarloHandRankCompare(const std::vector<Card>& cardsA, const std::vector<Card>& cardsB, const uint64_t& N) {

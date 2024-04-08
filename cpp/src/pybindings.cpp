@@ -5,7 +5,7 @@
 #include "table.h"
 #include <chrono>
 #include <fstream>
-#include <cassert>
+#include <any>
 
 
 #define PYTHON false
@@ -101,67 +101,11 @@ void pyMonteCarloGames(const uint64_t& N) {
 }
 
 
-double pyMonteCarloRounds(const uint64_t& N, std::vector<std::tuple<std::string, std::vector<int>>> aiInfo) {
-    // input: N games, vector of tuples ( Ai type string, ai parameters )
-
-    // Create Table and fill AI List
-    auto myTable = Table();
-    // unpack AI list
-    std::vector<string> aiStrings;
-    std::vector<std::vector<int>> aiParams;
-    for(auto& pair : aiInfo) {
-      aiStrings.emplace_back(std::get<0>(pair));
-      aiParams.emplace_back(std::get<1>(pair));
-    }
-    myTable.setPlayerList(aiStrings);
-    for( int i=0; i<aiStrings.size(); i++ ) {
-      // Table is filled according to same order as aiStrings
-      auto p = myTable.getPlayerByID(i);
-      p->strategy->updateParameters(aiParams[i]);
-    }
-
-    // now begin games part
-    std::random_device rd;
-    // set blind amounts
-    myTable.bigBlind = 10;
-    myTable.smallBlind = 5;
-
-    auto game = std::make_shared<Game>(myTable);
-
-    unordered_map<PlayerPosition, int> posWinnings;
-    unordered_map<int, int> playerIDWinnings;
-    int startingCash = 100;
-
-    auto start = std::chrono::steady_clock::now();
-    int iN = 0;
-    while( iN < N ) {
-      // Resets game, does a single round, tallies winnings
-      // Does not change player positions
-      game->table.setPlayerBankrolls(startingCash);
-      game->setup();
-      game->table.resetCards(rd);
-      game->doRound();  
-      iN++;
-      for_each(game->activePlayers.begin(), game->activePlayers.end(), [&posWinnings, &playerIDWinnings] (const shared_ptr<Player>& p) {
-        posWinnings[p->getPosition()] += p->bankroll;
-        playerIDWinnings[p->getPlayerID()] += p->bankroll;
-      } );
-    }
-
-    std::chrono::duration<double> duration = std::chrono::steady_clock::now() - start;
-    //std::cout << N << " games (" << totalRounds << " rounds) calculated in " << duration.count() << " seconds, or " 
-    //<< double(N)/duration.count() << " games/s (" << double(totalRounds)/duration.count() << " rounds/s)" << std::endl;
-    std::cout << N << " rounds calculated in " << duration.count() << " seconds, or " << double(N)/duration.count() << " rounds/s" << std::endl;
-    //std::cout << "Player 0 wins: " << playerIDWinCount[0] << std::endl;
-    // win count
-    const double NTimesStartingCash = double(N)*double(startingCash);
-    const double avgReturn = (double(playerIDWinnings[0]) - NTimesStartingCash)/NTimesStartingCash * 100.0;
-    std::cout << "Return: " << avgReturn << "%" <<  std::endl;
-    return avgReturn;
-
-}
-
 std::vector<Card> convertCharlesToMike(std::vector<std::tuple<int,int>> in) {
+    /* 
+    Charles's rank: 2-14 inclusive (A=14, 2=2)
+              suit: 1='S', 2='H', 3='D', 4='C'
+    */
     std::vector<Card> out;
     for(auto& pair : in) {
       Card n;
@@ -184,26 +128,9 @@ int pyShowdownHands(std::vector<std::tuple<int,int>> tupleIntsA, std::vector<std
   vector<Card> commCardsA;
   vector<Card> commCardsB;
 
-  auto convertCards = [] (vector<tuple<int,int>>& in, vector<Card>& out) -> void {
-    /* 
-    Charles's rank: 2-14 inclusive (A=14, 2=2)
-              suit: 1='S', 2='H', 3='D', 4='C'
-    */
-    for(auto& pair : in) {
-      Card n;
-      n.rank = static_cast<Rank>( get<0>(pair) - 2 );
-      const int charlesSuit = get<1>(pair);
-      if( charlesSuit == 1) n.suit = Suit::SPADE;
-      else if( charlesSuit == 2) n.suit = Suit::HEART;
-      else if( charlesSuit == 3) n.suit = Suit::DIAMOND;
-      else if( charlesSuit == 4) n.suit = Suit::CLUB;
-      out.emplace_back(n);
-    }
-  };
-
-  convertCards(tupleIntsA, cardsA);
-  convertCards(tupleIntsB, cardsB);
-  convertCards(communityTupleInts, commCardsA);
+  cardsA = convertCharlesToMike(tupleIntsA);
+  cardsB = convertCharlesToMike(tupleIntsB);
+  commCardsA = convertCharlesToMike(communityTupleInts);
   commCardsB = commCardsA;
 
   // append community cards 
@@ -219,7 +146,21 @@ int pyShowdownHands(std::vector<std::tuple<int,int>> tupleIntsA, std::vector<std
 }
 
 double pyMCSingleHand(const std::vector<std::tuple<int,int>>& cardsA, const std::vector<std::tuple<int,int>>& commCards, const int numOtherPlayers, const uint64_t N) {
-  return monteCarloSingleHand(convertCharlesToMike(cardsA), convertCharlesToMike(commCards), numOtherPlayers, N);
+  auto [avg, sigma] = monteCarloSingleHand(convertCharlesToMike(cardsA), convertCharlesToMike(commCards), numOtherPlayers, N);
+  return avg;
+}
+
+double pyMonteCarloRounds(const uint64_t& N, std::vector<double> mattParams) {
+    auto params = std::multimap<std::string, std::vector<std::any>>();
+    std::vector<std::any> mattParamsAny;
+    for( const auto& v : mattParams)
+      mattParamsAny.emplace_back(v);
+    params.emplace("Matt", mattParamsAny);
+    params.emplace("call", std::vector<std::any>{});
+    params.emplace("call", std::vector<std::any>{});
+    params.emplace("random", std::vector<std::any>{});
+    auto [avg, stddev] = monteCarloRounds(N, params);
+    return avg;
 }
 
 
@@ -234,6 +175,8 @@ double pyMCSingleHand(const std::vector<std::tuple<int,int>>& cardsA, const std:
           pybind11::arg("cardsA"), pybind11::arg("cardsB"), pybind11::arg("commCards"));
       m.def("MCSingleHand", &pyMCSingleHand, "monte carlo single hand",
           pybind11::arg("cards"), pybind11::arg("commCards"), pybind11::arg("numOtherPlayers"), pybind11::arg("N"));
+      m.def("MCMattRounds", &pyMonteCarloRounds, "monte carlo rounds (matt)",
+          pybind11::arg("N"), pybind11::arg("mattParams"));
   }
 
 #endif

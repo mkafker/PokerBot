@@ -42,7 +42,7 @@ namespace Poker {
                     guy->strategy = make_shared<CFRAI1>();
             else if (s == "Matt")
                     guy->strategy = make_shared<MattAI>();
-            else    guy->strategy = make_shared<RandomAI>();        // default = random moves
+            else    throw;
             guy->setPosition(playerPositionList[n]);
             guy->playerID = n;
             this->playerList.emplace_back(guy);

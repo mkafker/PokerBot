@@ -291,16 +291,16 @@ namespace Poker {
       const double callRaiseThres = thresholds[1];
       const double raiseAllinThres = thresholds[2];
       double matt = monteCarloSingleHand(p->hand, info->communityCards, numOtherPlayers, 100);
-      //std::cout << "MATT SAYS: " << matt << std::endl;
+      //std::cout << "MATT SAYS: " << p->hand << " = " << matt << std::endl;
       PlayerMove myMove;
-      if( matt > callRaiseThres and matt < raiseAllinThres )
-        myMove.move = Move::MOVE_RAISE;
-      else if( matt > raiseAllinThres )
-        myMove.move = Move::MOVE_ALLIN;
-      else if( matt < callRaiseThres and matt > foldCallThres )
-        myMove.move = Move::MOVE_CALL;
-      else 
+      if( matt < foldCallThres )
         myMove.move = Move::MOVE_FOLD;
+      else if( matt < callRaiseThres )
+        myMove.move = Move::MOVE_CALL;
+      else if( matt < raiseAllinThres )
+        myMove.move = Move::MOVE_RAISE;
+      else
+        myMove.move = Move::MOVE_ALLIN;
 
 
       if( myMove.move == Move::MOVE_FOLD) myMove.bet_amount = 0;
@@ -312,6 +312,10 @@ namespace Poker {
 
       return myMove;
 
+    }
+
+    void MattAI::updateParametersImpl(std::vector<double> thresholds_in) {
+        thresholds = thresholds_in;
     }
 
 

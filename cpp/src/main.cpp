@@ -1,5 +1,6 @@
 #include <iostream>
 #include <iomanip>
+#include <any>
 
 #include "card.h"
 #include "showdown.h"
@@ -11,12 +12,22 @@
 
 using namespace Poker;
 int main() {
-    
-    double winRate = pyMonteCarloRounds(1000, {{"random", {}}, {"call", {}}});
-    std::cout << winRate << std::endl;
+    auto params = std::multimap<std::string, std::vector<std::any>>();
+    //params.emplace("Matt", std::vector<std::any> {0.213, 0.318, 0.326});
+    params.emplace("Matt", std::vector<std::any> {0.19, 0.32, 0.66});
+    params.emplace("call", std::vector<std::any>{});
+    params.emplace("call", std::vector<std::any>{});
+    params.emplace("random", std::vector<std::any>{});
+
+    auto [avgr, stddevr] = monteCarloRounds(1000, params);
+    std::cout << avgr << " (" << stddevr << ")" << std::endl;
+
+    auto [avgg, stddevg] = monteCarloGames(1000, params);
+    std::cout << avgg << " (" << stddevg << ")" << std::endl;
 
 
     // Calculates pre-flop ranges
+    /*
     vector<Suit> suitlist = { Suit::HEART, Suit::CLUB, Suit::DIAMOND, Suit::SPADE};
     for(int j=0; j<13; j++) 
         std::cout << std::setw(10) << static_cast<Rank>(j) << " ";
@@ -36,6 +47,7 @@ int main() {
         }
         std::cout << std::endl;
     }
+    */
 
     //monteCarloGames(10000, {"Matt", "call"});
 

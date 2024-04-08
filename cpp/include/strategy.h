@@ -22,7 +22,6 @@ namespace Poker {
                     updateParametersImpl(std::forward<Args>(args)...);
                 }
         private:
-            virtual void updateParametersImpl() {};
             template<typename... Args>
                 void updateParametersImpl(Args...) {};
     };
@@ -95,7 +94,6 @@ namespace Poker {
             PlayerMove makeMove(std::shared_ptr<Table> info, const shared_ptr<Player>) override;
             map<vector<Move>, int> moveSequenceToBet;
             vector<Move> enemyMoves;
-            void updateMoveSequenceToBet(const vector<int>& vec_in);
     };
 
     enum class PlayerPosition;
@@ -190,6 +188,8 @@ namespace Poker {
             using Strategy::Strategy;
             PlayerMove makeMove(std::shared_ptr<Table> info, const shared_ptr<Player>) override;
             std::vector<double> thresholds = {0.2, 0.7, 0.9};
+      private:
+            void updateParametersImpl(std::vector<double>);
     };
 
 
