@@ -312,9 +312,6 @@ std::tuple<double,double> monteCarloSingleHand(const std::vector<Card>& cardsA, 
     const double winRateA = double(winCountA)/N;
     //std::cout << "A winrate: " << winRateA*100.0 << "%" << std::endl;
     //std::cout << N << " hands calculated in " << duration.count() << " seconds, or " << double(N)/duration.count() << " hands/second" << std::endl;
-    const double winRateA = double(winCountA)/N;
-    //std::cout << "A winrate: " << winRateA*100.0 << "%" << std::endl;
-    //std::cout << N << " hands calculated in " << duration.count() << " seconds, or " << double(N)/duration.count() << " hands/second" << std::endl;
     double sigma = 0.0;
     for(auto& e : outcomes)
     {

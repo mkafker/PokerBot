@@ -290,14 +290,14 @@ namespace Poker {
       const double foldCallThres = thresholds[0];
       const double callRaiseThres = thresholds[1];
       const double raiseAllinThres = thresholds[2];
-      double matt = monteCarloSingleHand(p->hand, info->communityCards, numOtherPlayers, 100);
+      auto [avg, sigma] = monteCarloSingleHand(p->hand, info->communityCards, numOtherPlayers, 100);
       //std::cout << "MATT SAYS: " << p->hand << " = " << matt << std::endl;
       PlayerMove myMove;
-      if( matt < foldCallThres )
+      if( avg < foldCallThres )
         myMove.move = Move::MOVE_FOLD;
-      else if( matt < callRaiseThres )
+      else if( avg < callRaiseThres )
         myMove.move = Move::MOVE_CALL;
-      else if( matt < raiseAllinThres )
+      else if( avg < raiseAllinThres )
         myMove.move = Move::MOVE_RAISE;
       else
         myMove.move = Move::MOVE_ALLIN;
