@@ -303,6 +303,10 @@ class HandTypeEvaluation:
 
     @staticmethod
     def evalhand(values, suits, vset, all_cards):
+        # print(values)
+        # print(suits)
+        # print(vset)
+        # print(all_cards)
         """Returns the exact type of hand (string) that is present given a list of values and suits within the hand,
         a set of values within the hand, and a list of all the cards in the hand"""
         x = HandTypeEvaluation.straight_flush(suits, all_cards)
@@ -434,23 +438,5 @@ def showdown_poker(player_cards, community_cards):
 
     values, vset, suits, all_cards = determine(user_hand)
     exact_hand = HandTypeEvaluation.evalhand(values, suits, vset, all_cards)
-    return HandTypeEvaluation.strength
-
-def temp_showdown_poker(player_cards, community_cards):
-
-    suit_num_to_str = {
-        1: "Spades",
-        2: "Hearts",
-        3: "Diamonds",
-        4: "Clubs"
-    }
-
-    user_hand = dict()
-    for i in range(len(player_cards)):
-        user_hand.update({i: Card(player_cards[i][0], suit_num_to_str[player_cards[i][1]])})
-    for i in range(len(community_cards)):
-        user_hand.update({i + len(player_cards): Card(community_cards[i][0], suit_num_to_str[community_cards[i][1]])})
-
-    values, vset, suits, all_cards = determine(user_hand)
-    exact_hand = HandTypeEvaluation.evalhand(values, suits, vset, all_cards)
+    #print(exact_hand)
     return HandTypeEvaluation.strength

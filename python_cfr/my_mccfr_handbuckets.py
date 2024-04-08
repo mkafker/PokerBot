@@ -15,7 +15,7 @@ sys.path.append('../')
 from cpp_temp import poker as mike_poker
 
 from helper_objects import Card, Deck
-# from better_showdown import showdown_poker
+from better_showdown import showdown_poker
 
 '''
 This is supposed to be a version of MC-CFR+ which uses some version of
@@ -29,12 +29,12 @@ Currently this is no set up to optimally save time while training.
 '''
 
 _MAX_BET = 5 # Includes the antee of $1
-_BET_ROUNDS = 4
+_BET_ROUNDS = 3
 _HAND_BINS = 5
-_NB_SIMULATION = 20
-_N_ITERATIONS = 1000
+_NB_SIMULATION = 200
+_N_ITERATIONS = 100
 _load_previous_imap = True
-random.seed(1)
+#random.seed(3)
 
 def custom_serializer(obj):
     if isinstance(obj, list):
@@ -81,12 +81,15 @@ def main():
             still_basic = 0
             for key, val in i_map.items():
                 actions = valid_actions(key, _MAX_BET)
-                basic_strat = [round(1 / len(actions), 2) for _ in actions]
-                actual_strat = [round(x, 2) for x in val.strategy]
+                basic_strat = [round(1 / len(actions), 3) for _ in actions]
+                actual_strat = [round(x, 3) for x in val.get_average_strategy()]
+                #print(key, basic_strat, actual_strat)
                 if basic_strat == actual_strat or set([1.0, 0.0]) == set(actual_strat):
+                    #print("Qualified as basic")
                     still_basic += 1
 
-            print(f'Ratio of basic strategies: {round(still_basic / len(i_map), 2)}')
+
+            print(f'Ratio of basic strategies: {round(still_basic / len(i_map), 5)}')
 
             try:
                 temp_i_map = copy.copy(i_map)
@@ -140,6 +143,16 @@ def mccfr(i_map, start_from, infoset_key=";;", deck = Deck(13, 4),
         The probability contribution of chance events to reach `history`.
     """
 
+    # print(infoset_key)
+    # if infoset_key == "P1;0;aa/c1r":
+    #     print(p1_cards, p2_cards)
+    #     print(estimate_hand_strength(p1_cards, (), deck))
+    #     print(estimate_hand_strength(p2_cards, (), deck))
+    # if infoset_key == "P2;0;aa/c":
+    #     print(p1_cards, p2_cards)
+    #     print(estimate_hand_strength(p1_cards, (), deck))
+    #     print(estimate_hand_strength(p2_cards, (), deck))
+
     if is_terminal_node(infoset_key):
         player_id = infoset_key.split(";")[0]
         return terminal_util_handbuckets(infoset_key, p1_cards, p2_cards, co_cards, player_id, deck)
@@ -175,7 +188,7 @@ def mccfr(i_map, start_from, infoset_key=";;", deck = Deck(13, 4),
     action_utils = np.zeros(info_set.n_actions)
     
     for i, action in enumerate(valid_actions(infoset_key, _MAX_BET)):
-        next_infoset_key = swap_players(infoset_key) + action
+        next_infoset_key = swap_players(infoset_key, p1_hs_hist, p2_hs_hist) + action
         
         if player_id == "P1":
             action_utils[i] = -1 * mccfr(i_map, start_from, next_infoset_key, deck, 
@@ -199,14 +212,19 @@ def mccfr(i_map, start_from, infoset_key=";;", deck = Deck(13, 4),
 
     return util
 
-def swap_players(infoset_key):
+def swap_players(infoset_key, p1_hs_hist, p2_hs_hist):
     
     if infoset_key[1] == "1":
         infoset_key = infoset_key[0] + str(2) + infoset_key[2:]
+        op_hs = p2_hs_hist
     else:
         infoset_key = infoset_key[0] + str(1) + infoset_key[2:]
+        op_hs = p1_hs_hist
+    
+    infoset_key = infoset_key.split(";")
+    infoset_key[1] = str(op_hs)
 
-    return infoset_key
+    return ";".join(infoset_key)
 
 class InformationSet():
     def __init__(self, key):
@@ -237,9 +255,9 @@ class InformationSet():
         self.num = 0
 
     def next_strategy(self):
-        #self.strategy_sum += self.reach_pr * self.strategy
+        self.strategy_sum += self.reach_pr * self.strategy
         self.num += 1
-        self.strategy_sum += self.strategy
+        #self.strategy_sum += self.strategy
         self.strategy = self.calc_strategy()
         self.reach_pr_sum += self.reach_pr
         self.reach_pr = 0
@@ -270,8 +288,8 @@ class InformationSet():
         Nash equilibrium strategy.
         """
 
-        # strategy = self.strategy_sum / self.reach_pr_sum
-        strategy = self.strategy_sum / self.num
+        strategy = self.strategy_sum / self.reach_pr_sum
+        # strategy = self.strategy_sum / self.num
 
         # Purify to remove actions that are likely a mistake
         strategy = np.where(strategy < 0.001, 0, strategy)
@@ -311,34 +329,12 @@ def sort_cards(cards):
     sorted_cards = sorted(list(cards), key=lambda x: (x.rank, x.suit))
     return tuple(sorted_cards)
 
-# def estimate_hand_strength(player_cards, co_cards, deck):
-#     simulation_results = []
-
-#     for i in range(_NB_SIMULATION):
-#         opponents_cards, new_deck = deck.draw_random_cards(2)
-#         new_community_cards, final_deck = new_deck.draw_random_cards(5 - len(co_cards))
-#         community_cards  = sort_cards(co_cards + new_community_cards)
-#         dummy_history = ['cc']
-#         winner = evaluate_winner(player_cards, opponents_cards, community_cards, dummy_history)
-
-#         if winner == 0: # player wins
-#             result = 1
-#         elif winner == 2: # tie
-#             result = 0.5
-#         else: # player looses
-#             result = 0
-
-#         simulation_results.append(result)
-#     average_win_rate = sum(simulation_results) / len(simulation_results)
-      
-#     return average_win_rate
-
 def estimate_hand_strength(player_cards, co_cards, deck):
     simulation_results = []
 
     for i in range(_NB_SIMULATION):
         cardnum = 2 + 5 - len(co_cards)
-        selected_cards = list(sorted(random.sample(list(deck.cards), cardnum)))
+        selected_cards = list(random.sample(list(deck.cards), cardnum))
         opponents_cards = tuple(selected_cards[0:2])
         community_cards = co_cards + tuple(selected_cards[2:])
         dummy_history = ['cc']
@@ -347,7 +343,7 @@ def estimate_hand_strength(player_cards, co_cards, deck):
         if winner == 0: # player wins
             result = 1
         elif winner == 2: # tie
-            result = 0.5
+            result = 0
         else: # player looses
             result = 0
 
@@ -355,18 +351,6 @@ def estimate_hand_strength(player_cards, co_cards, deck):
     average_win_rate = sum(simulation_results) / len(simulation_results)
       
     return average_win_rate
-
-# def estimate_hand_strength(player_cards, co_cards, deck):
-
-#     player_cards = [(card.rank, card.suit) for card in player_cards]
-#     co_cards = [(card.rank, card.suit) for card in co_cards]
-
-#     # print()
-#     # print(player_cards)
-#     # print(co_cards)
-
-#     average_win_rate = mike_poker.MCSingleHand(player_cards, co_cards, 1, _NB_SIMULATION)
-#     return average_win_rate
 
 def clamp_hand_strength(avg_win_rate):
     hand_strength = None
@@ -502,8 +486,9 @@ def chance_util(i_map, start_from, infoset_key, deck,
             if start_from == "P1":
                 p1_hand_strength = clamp_hand_strength(estimate_hand_strength(p_cards, co_cards, final_deck))
                 p1_hs_hist = str(p1_hand_strength)
+                p2_hand_strength = clamp_hand_strength(estimate_hand_strength(s_cards, co_cards, final_deck))
+                p2_hs_hist = str(p2_hand_strength)
                 infoset_key = f'P1;{p1_hand_strength};aa/'
-                
                 expected_value += mccfr(i_map, start_from, infoset_key, final_deck, 
                                 p_cards, s_cards, co_cards,
                                 p1_hs_hist, p2_hs_hist,
@@ -555,11 +540,10 @@ def chance_util(i_map, start_from, infoset_key, deck,
             new_p2_hs_hist = p2_hs_hist + "/" + str(p2_hand_strength)
 
             new_infoset_key = infoset_key.split(";")
+            if player_id == "P2":
+                new_infoset_key[0] = "P1"
             new_infoset_key = [new_infoset_key[0]] + [new_p1_hs_hist] + [new_infoset_key[-1]]
             new_infoset_key = ';'.join(new_infoset_key) + "/"
-
-            if player_id == "P2":
-                new_infoset_key = swap_players(new_infoset_key)
 
             expected_value += mccfr(i_map, start_from, new_infoset_key, new_deck, 
                                     p1_cards, p2_cards, new_co_cards,
@@ -616,31 +600,31 @@ def terminal_util_handbuckets(infoset_key, p1_cards, p2_cards, co_cards, player_
         else:
             return -1 * p2_commited
 
-# def evaluate_winner(cards_1, cards_2, community_cards, history):
-#     """
-#     This function returns 0, 1, 2 for player 1 winning, player 2 winning
-#     or both players tieing.
-#     """
+def evaluate_winner_slow(cards_1, cards_2, community_cards, history):
+    """
+    This function returns 0, 1, 2 for player 1 winning, player 2 winning
+    or both players tieing.
+    """
     
-#     # Check for insufficent number of community cards
-#     if len(community_cards) < 5:
-#         print("NOT ENOUGH COMMUNITY CARD TO DETERMINE WINNER")
-#         quit()
+    # Check for insufficent number of community cards
+    if len(community_cards) < 5:
+        print("NOT ENOUGH COMMUNITY CARD TO DETERMINE WINNER")
+        quit()
 
-    # # Check for folding
-    # if len(history) > 0 and len(history[-1]) > 0 and history[-1][-1] == 'f':
-    #     final_history = extract_actions(history[-1])
-    #     if len(final_history) % 2 == 0:
-    #         return 0 # Player 2 folded
-    #     else:
-    #         return 1 # Player 1 folded
+    # Check for folding
+    if len(history) > 0 and len(history[-1]) > 0 and history[-1][-1] == 'f':
+        final_history = extract_actions(history[-1])
+        if len(final_history) % 2 == 0:
+            return 0 # Player 2 folded
+        else:
+            return 1 # Player 1 folded
 
-#     if showdown_poker(cards_1, community_cards) > showdown_poker(cards_2, community_cards):
-#         return 0 # Player 1 wins
-#     elif showdown_poker(cards_2, community_cards) > showdown_poker(cards_1, community_cards):
-#         return 1 # Player 2 wins
-#     else:
-#         return 2 # Tie
+    if showdown_poker(cards_1, community_cards) > showdown_poker(cards_2, community_cards):
+        return 0 # Player 1 wins
+    elif showdown_poker(cards_2, community_cards) > showdown_poker(cards_1, community_cards):
+        return 1 # Player 2 wins
+    else:
+        return 2 # Tie
 
 
 def evaluate_winner(cards_1, cards_2, community_cards, history):
