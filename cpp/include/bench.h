@@ -5,7 +5,7 @@
 #include <any>
 
 namespace Poker {
-  void benchmarkHandRankCalculator();
+  void benchmarkHandRankCalculator(const uint64_t& N);
   void benchmarkRounds(uint64_t);
 
   void monteCarloHandRankCompare(const std::vector<Card>& cardsA, const std::vector<Card>& cardsB, const double& tgt);

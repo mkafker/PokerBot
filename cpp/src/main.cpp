@@ -12,8 +12,8 @@
 
 using namespace Poker;
 int main() {
+    /*
     auto params = std::multimap<std::string, std::vector<std::any>>();
-    //params.emplace("Matt", std::vector<std::any> {0.213, 0.318, 0.326});
     params.emplace("Matt", std::vector<std::any> {0.19, 0.32, 0.66});
     params.emplace("call", std::vector<std::any>{});
     params.emplace("call", std::vector<std::any>{});
@@ -24,6 +24,9 @@ int main() {
 
     auto [avgg, stddevg] = monteCarloGames(1000, params);
     std::cout << avgg << " (" << stddevg << ")" << std::endl;
+    */
+
+    benchmarkHandRankCalculator(1000000);
 
 
     // Calculates pre-flop ranges

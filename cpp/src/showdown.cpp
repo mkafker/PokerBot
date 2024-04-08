@@ -1,4 +1,5 @@
 #include <unordered_map>
+#include <map>
 #include <algorithm>
 #include <list>
 #include "card.h"
@@ -26,156 +27,188 @@ namespace Poker {
           std::sort(h.begin(), h.end(), [](const Card& a, const Card& b) { return a>b; });
   }
 
-  const FullHandRank calcFullHandRank(const std::vector<Card>& hand_in) {
-          std::vector<Card> cards = hand_in;
-          
-          FullHandRank ret;
-          sortCardsDescending(cards);
 
-          const size_t num_cards = cards.size();
-
-          std::vector<Card>     winningCards;
-          std::vector<Card>     kickerCards;
-
-          // Maps galore!
-          std::unordered_map<Rank, std::pair<size_t, std::vector<Card>>> ranks;
-          std::unordered_map<Suit, std::pair<size_t, std::vector<Card>>> suits;
-
-          // yuck!
-
-          bool is_straight_flush  = false;
-          bool is_four_kind       = false;
-          std::vector<Card>      four_kind_cards;
-          bool is_full_house      = false;
-          std::vector<Card>      full_house_cards;
-          bool is_flush           = false;
-          std::vector<Card>      flush_cards;
-          bool is_straight        = false;
-          std::vector<Card>      straight_cards;
-          bool is_three_kind      = false;
-          std::vector<Card>      multi_three_kind_cards;         // Can be the case that there are two three of a kinds
-          bool is_two_pair        = false;
-          bool is_pair            = false;
-          std::vector<Card>      multi_pair_cards;               // ditto with two pairs
-          std::vector<Card> high_card;
-          
-          for(int i=0; i<num_cards; i++) {
-              const auto cardranktmp = cards[i].get_rank();
-              const auto cardsuittmp = cards[i].get_suit();
-              ranks[cardranktmp].first++;
-              ranks[cardranktmp].second.emplace_back(cards.at(i));
-              suits[cardsuittmp].first++;
-              suits[cardsuittmp].second.emplace_back(cards.at(i));
-
-              if( cards[i].get_rank_as_int() == cards[i+1].get_rank_as_int()+1 && !is_straight) {
-                  straight_cards.emplace_back(cards[i+1]); 
-                  if(straight_cards.size() == 1) {
-                      straight_cards.emplace_back(cards[i]);
-                  }
-                  else if(straight_cards.size() == 5) {
-                      is_straight = true;
-                  }
-              }
-          }
-          
-          for(const auto& suit_count_pair : suits) {
-              if (suit_count_pair.second.first >= 5) { 
-                  is_flush = true;
-                  flush_cards = suit_count_pair.second.second;
-                  flush_cards.resize(5);
-                  // SECOND SECOND FIRST FIRST SECOND
-              }
-          }
-
-          if (is_straight && is_flush && (flush_cards == straight_cards)) {
-              is_straight_flush = true;
-          }
-
-
-          int three_count = 0; //durrrr
-          int two_count   = 0;
-          for(const auto& ranks_pair : ranks) {
-              // Look for four of a kind
-              if (ranks_pair.second.first == 4) {
-                  is_four_kind = true;
-                  four_kind_cards = ranks_pair.second.second;
-                  break;
-              }
-              // Look for full house or two pair
-              else if (ranks_pair.second.first == 3) {
-                  is_three_kind = true;
-                  const auto tmp = ranks_pair.second.second;
-                  multi_three_kind_cards.insert(multi_three_kind_cards.end(), tmp.begin(), tmp.end()); 
-                  three_count++;
-              }
-              else if (ranks_pair.second.first == 2) {
-                  const auto tmp = ranks_pair.second.second;
-                  multi_pair_cards.insert(multi_pair_cards.end(), tmp.begin(), tmp.end());
-                  two_count++;
-              }
-          }
-
-          if ( two_count >= 2 ) {
-              is_two_pair = true;
-              sortCardsDescending(multi_pair_cards);
-              multi_pair_cards.resize(4);     // trims low valued pairs
-          }
-          if ( two_count == 1 ) is_pair = true;
-
-          if ( three_count > 1) {
-            sortCardsDescending(multi_three_kind_cards);
-            multi_three_kind_cards.resize(3);
-          }
-
-
-          if ( (is_three_kind && is_pair) || (is_three_kind && is_two_pair) ) {
-              is_full_house = true;
-
-              full_house_cards.insert(full_house_cards.end(), multi_three_kind_cards.begin(), multi_three_kind_cards.end());
-              full_house_cards.insert(full_house_cards.end(), multi_pair_cards.begin(), multi_pair_cards.end());
-              full_house_cards.resize(5);
-          }
-
-          // if none of these, high card
-          
-          high_card.emplace_back(cards.front());
-          
-          if ( is_straight_flush )         { ret.handrank =  HandRank::STRAIGHT_FLUSH;        winningCards = straight_cards; }
-          else if ( is_four_kind )         { ret.handrank =  HandRank::FOUR_KIND;             winningCards = four_kind_cards; }
-          else if ( is_full_house )        { ret.handrank =  HandRank::FULL_HOUSE;            winningCards = full_house_cards; }
-          else if ( is_flush )             { ret.handrank =  HandRank::FLUSH;                 winningCards = flush_cards; }
-          else if ( is_straight )          { ret.handrank =  HandRank::STRAIGHT;              winningCards = straight_cards; }
-          else if ( is_three_kind )        { ret.handrank =  HandRank::THREE_KIND;            winningCards = multi_three_kind_cards; }
-          else if ( is_two_pair )          { ret.handrank =  HandRank::TWO_PAIR;              winningCards = multi_pair_cards; }
-          else if ( is_pair )              { ret.handrank =  HandRank::ONE_PAIR;              winningCards = multi_pair_cards; }
-          else                             { ret.handrank = HandRank::HIGH_CARD;              winningCards = high_card; }
-
-          // get kicker cards
-
-
-          // TODO: check if this works now. and benchmark it against the impl below
-          //std::set_difference( cards.begin(), cards.end(), winningCards.begin(), winningCards.end(), std::back_inserter(kickerCards) , ascendingComparator);
-
-          auto itCards = cards.begin();
-          while(itCards != cards.end() ) {
-              bool addCard = true;
-              auto itWinners = winningCards.begin();
-              while(itWinners != winningCards.end()) {
-                  if( *itWinners == *itCards)
-                      addCard = false;
-                  itWinners++;
-              }
-              if( addCard ) kickerCards.emplace_back(*itCards);
-              itCards++;
-          }
-          sortCardsDescending(kickerCards);
-          sortCardsDescending(winningCards);
-
-          ret.kickers = kickerCards;
-          ret.maincards = winningCards;
-
-
+    #define DEREF_COMPLEMENT_RETURN \
+        for( const auto& ptr : winningCards ) { \
+            ret.maincards.push_back(*ptr); \
+        }  \
+          auto itCards = cards.begin();  \
+          while(itCards != cards.end() ) { \
+              bool addCard = true; \
+              auto itWinners = ret.maincards.begin(); \
+              while(itWinners != ret.maincards.end()) { \
+                  if( *itWinners == *itCards) \
+                      addCard = false; \
+                  itWinners++; \
+              } \
+              if( addCard ) ret.kickers.emplace_back(*itCards); \
+              itCards++; \
+          } \
           return ret;
+
+    struct RankDescendingOrder {
+        bool operator()(const Rank& a, const Rank& b) const {
+            return a>b;
+        }
+    };
+
+    const FullHandRank calcFullHandRank(const std::vector<Card>& hand_in) {
+        std::vector<Card> cards = hand_in;
+        FullHandRank ret;
+        // the most important sort in the universe
+        sortCardsDescending(cards);
+
+        const size_t num_cards = cards.size();
+
+        std::vector<Card*>     winningCards;
+
+        // Maps galore!
+        std::map<Rank, std::vector<Card*>, RankDescendingOrder> ranks;
+        std::unordered_map<Suit, std::vector<Card*>> suits;
+    
+        bool is_flush           = false;
+        std::vector<Card*>      flush_cards;
+        bool is_straight        = false;
+        std::vector<Card*>      straight_cards;
+
+        // Fill maps... these serve as histograms
+        for(int i=0; i<num_cards; i++) {
+            const auto cardranktmp = cards[i].get_rank();
+            const auto cardsuittmp = cards[i].get_suit();
+            ranks[cardranktmp].emplace_back(&cards[i]);
+            suits[cardsuittmp].emplace_back(&cards[i]);
+        }
+        
+        // Check for a flush
+        for(const auto& suit_count_pair : suits) {
+            if (suit_count_pair.second.size() >= 5) { 
+                is_flush = true;
+                flush_cards = suit_count_pair.second;
+                flush_cards.resize(5);
+            }
+        }
+
+        // If it's a flush, check if it's also a straight. Then our work is done
+        bool is_straight_flush  = false;
+        if( is_flush ) {
+            int straightCount = 1;
+            for(int i=1; i < flush_cards.size(); i++) {
+                    if(flush_cards[i]->get_rank_as_int() == flush_cards[i - 1]->get_rank_as_int() + 1) {
+                        straightCount++;
+                        // there will only ever be 5 cards in a flush so they must
+                        // all have consecutive ranks to be a straight flush
+                        if(straightCount == 5) {
+                            is_straight = true;
+                            is_straight_flush = true;
+                            break;
+                        }
+                    } else {
+                        straightCount = 1;
+                    }
+            }
+            if( is_straight_flush ) {
+                ret.handrank = HandRank::STRAIGHT_FLUSH;
+                winningCards = flush_cards;
+                DEREF_COMPLEMENT_RETURN;
+            }
+        }
+        
+        bool is_four_kind       = false;
+        std::vector<Card*>      four_kind_cards;
+        bool is_full_house      = false;
+        std::vector<Card*>      full_house_cards;
+        std::vector<Card*>      multi_three_kind_cards;         // Can be the case that there are two three of a kinds
+        std::vector<Card*>      multi_pair_cards;               // ditto with two pairs
+        std::vector<Card*>      high_card;
+        int three_count = 0;
+        int two_count = 0;
+        // Check for two/three/four of a kinds
+        for(const auto& r_pair : ranks) {
+            if(r_pair.second.size() == 4) {
+                is_four_kind = true;
+                four_kind_cards = r_pair.second;
+
+                ret.handrank = HandRank::FOUR_KIND;
+                winningCards = four_kind_cards;
+                DEREF_COMPLEMENT_RETURN;
+            }
+            else if (r_pair.second.size() == 3) {
+                multi_three_kind_cards.insert(multi_three_kind_cards.end(), r_pair.second.begin(), r_pair.second.end()); 
+                three_count++;
+            }
+            else if (r_pair.second.size() == 2) {
+                multi_pair_cards.insert(multi_pair_cards.end(), r_pair.second.begin(), r_pair.second.end());
+                two_count++;
+            }
+        }
+
+        if ( three_count == 1 and two_count >= 1 ) {   // FULL  HOUSE
+            full_house_cards.insert(full_house_cards.end(), multi_three_kind_cards.begin(), multi_three_kind_cards.end());
+            full_house_cards.insert(full_house_cards.end(), multi_pair_cards.begin(), multi_pair_cards.begin()+2); // multi_pair_cards should be sorted already. This should pick the best pair
+            ret.handrank = HandRank::FULL_HOUSE;
+            winningCards = full_house_cards;
+            DEREF_COMPLEMENT_RETURN;
+        }
+        else if ( is_flush ) {
+            ret.handrank = HandRank::FLUSH;
+            winningCards = flush_cards;
+            DEREF_COMPLEMENT_RETURN;
+        }
+        // check for a straight
+        int straightCount = 1;
+        std::vector<int> straightRanks;
+        for(const auto& pair : ranks)
+            straightRanks.emplace_back(static_cast<int>(pair.first));
+        for(int i=0; i < straightRanks.size(); i++) {
+            if( straight_cards.empty() ) straight_cards.emplace_back(ranks[static_cast<Rank>(straightRanks[i])][0]);
+            else {
+                const bool descending = straightRanks[i] == straightRanks[i-1] - 1;
+                const bool flat = straightRanks[i] == straightRanks[i-1];
+                if ( descending and !flat) {
+                    straightCount++;
+                    // Put back the first card from the vector of cards with descending Rank
+                    // In the eyes of a straight, all of these cards are equivalent
+                    straight_cards.emplace_back(ranks[static_cast<Rank>(straightRanks[i])][0]);
+                    if( straightCount == 5) {
+                        is_straight = true;
+                        ret.handrank = HandRank::STRAIGHT;
+                        winningCards = straight_cards;
+                        DEREF_COMPLEMENT_RETURN;
+                    }
+                }
+                else if (not (flat or descending)) {
+                    straightCount = 1;
+                    straight_cards.clear();
+                }
+            }
+        }
+
+        // check for three of a kind
+        if( three_count >= 1) {
+            multi_three_kind_cards.resize(3);
+            ret.handrank = HandRank::THREE_KIND;
+            winningCards = multi_three_kind_cards;
+            DEREF_COMPLEMENT_RETURN;
+        }
+        // check for two pair
+        else if( two_count >= 2) {
+            multi_pair_cards.resize(4);
+            ret.handrank = HandRank::TWO_PAIR;
+            winningCards = multi_pair_cards;
+            DEREF_COMPLEMENT_RETURN;
+        }
+        else if( two_count == 1) {
+            ret.handrank = HandRank::ONE_PAIR;
+            winningCards = multi_pair_cards;
+            DEREF_COMPLEMENT_RETURN;
+        }
+        else {
+            ret.handrank = HandRank::HIGH_CARD;
+            high_card.emplace_back(&cards.front());
+            winningCards = high_card;
+            DEREF_COMPLEMENT_RETURN;
+        }
+        return nullFHR;
       }
 
   const FullHandRank& showdownFHR(const FullHandRank& A, const FullHandRank& B) {

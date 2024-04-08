@@ -8,18 +8,18 @@
 #include <any>
 
 namespace Poker {
-  void benchmarkHandRankCalculator() {
-      std::random_device rd;
-      std::mt19937_64 g(rd());
-      uint64_t N = 1000000;
+  void benchmarkHandRankCalculator(const uint64_t& N) {
       auto start = std::chrono::steady_clock::now();
       FullHandRank lastHand;
       int iT = 0;
+      std::random_device rd;
+      std::mt19937_64 g(rd());
       for(int iN = 0; iN < N; iN++) {
           iT++;
           Deck newdeck;
           newdeck.mersenne = g;
-          newdeck.shuffle();
+          //newdeck.shuffle();          // will someone PLEASE tell me why this doesn't work
+          std::shuffle(newdeck.cards.begin(), newdeck.cards.end(), g);
           std::vector<Card> cards(7);
           for(short j=0; j<7; j++)
               cards[j]=newdeck.pop_card();
