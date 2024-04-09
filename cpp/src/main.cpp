@@ -1,6 +1,7 @@
 #include <iostream>
 #include <iomanip>
 #include <any>
+#include <chrono>
 
 #include "card.h"
 #include "showdown.h"
@@ -12,21 +13,25 @@
 
 using namespace Poker;
 int main() {
-    /*
     auto params = std::multimap<std::string, std::vector<std::any>>();
-    params.emplace("Matt", std::vector<std::any> {0.19, 0.32, 0.66});
+    params.emplace("CFRAI1", std::vector<std::any>{});
+    params.emplace("Matt", std::vector<std::any> {0.44, 0.46, 0.54});
     params.emplace("call", std::vector<std::any>{});
     params.emplace("call", std::vector<std::any>{});
-    params.emplace("random", std::vector<std::any>{});
 
-    auto [avgr, stddevr] = monteCarloRounds(1000, params);
+    auto start = std::chrono::steady_clock::now();
+    constexpr int N = 100;
+    auto [avgr, stddevr] = monteCarloRounds(N, params);
+    //benchmarkHandRankCalculator(N);
     std::cout << avgr << " (" << stddevr << ")" << std::endl;
 
-    auto [avgg, stddevg] = monteCarloGames(1000, params);
-    std::cout << avgg << " (" << stddevg << ")" << std::endl;
-    */
+    std::chrono::duration<double> duration = std::chrono::steady_clock::now() - start;
+    std::cout << N << " rounds calculated in " << duration.count() << " seconds, or " 
+    << double(N)/duration.count() << " rounds/s" << std::endl;
 
-    benchmarkHandRankCalculator(1000000);
+    //auto [avgg, stddevg] = monteCarloGames(1000, params);
+    //std::cout << avgg << " (" << stddevg << ")" << std::endl;
+    //benchmarkHandRankCalculator(1000000);
 
 
     // Calculates pre-flop ranges
@@ -41,9 +46,7 @@ int main() {
             Card c1(static_cast<Rank>(i), Suit::HEART);
             Card c2(static_cast<Rank>(j), Suit::HEART);
             std::vector<Card> myCards = { c1, c2 };
-            auto a = monteCarloSingleHandStdDev(myCards, 5, 5, 5000);
-            auto WR = a[0];
-            auto var = a[1];
+            auto [WR, var] = monteCarloSingleHandStdDev(myCards, 5, 1, 5000);
             std::cout << std::fixed;
             std::cout << std::setprecision(2) << std::setw(10);
             std::cout << WR << " (" << var << ")";

@@ -32,12 +32,6 @@ namespace Poker {
                     guy->strategy = make_shared<SingleMoveCallAI>();
             else if (s == "sequence")
                     guy->strategy = make_shared<SequenceMoveAI>();
-            else if (s == "fhrprop")
-                    guy->strategy = make_shared<FHRProportionalAI>();
-            else if (s == "handstreetaware")
-                    guy->strategy = make_shared<HandStreetAwareAI>();
-            else if (s == "fhraware")
-                    guy->strategy = make_shared<FHRAwareAI>();
             else if (s == "CFRAI1")
                     guy->strategy = make_shared<CFRAI1>();
             else if (s == "Matt")
@@ -86,9 +80,9 @@ namespace Poker {
         std::mt19937_64 g(rd());
         
         deck = Deck();
-        deck.mersenne = g;
         // shuffle cards
-        this->shuffleDeck();
+        std::shuffle(deck.cards.begin(), deck.cards.end(), g);
+        //this->shuffleDeck();
         // clear community cards
         this->communityCards.clear();
         this->clearPlayerHands();       

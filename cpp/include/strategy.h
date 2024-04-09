@@ -48,44 +48,6 @@ namespace Poker {
             PlayerMove makeMove(std::shared_ptr<Table> info, const shared_ptr<Player>) override;
     };
 
-    struct FHRProportionalAI : public Strategy {
-      public:
-        using Strategy::Strategy;
-        PlayerMove makeMove(std::shared_ptr<Table> info, const shared_ptr<Player>) override;
-    };
-
-    struct HandStreetAwareAI : public Strategy {
-        public:
-            using Strategy::Strategy;
-            PlayerMove makeMove(std::shared_ptr<Table> info, const shared_ptr<Player>) override;
-            // which relationship to use during different phases of the game
-            std::map<int, std::map<HandRank, int>> streetRBR;
-    };
-
-    struct FHRAwareAI : public Strategy {
-        public:
-            using Strategy::Strategy;
-            PlayerMove makeMove(std::shared_ptr<Table> info, const shared_ptr<Player>) override;
-            struct ReducedFullHandRank  {
-                HandRank handrank = HandRank::UNDEF_HANDRANK;                  
-                Card maincard = Card();        
-                bool operator==(const ReducedFullHandRank& other) const {
-                    return this->handrank == other.handrank and this->maincard == other.maincard;
-                }
-                bool operator<(const ReducedFullHandRank& other) const {
-                    if( this->handrank > other.handrank) return false;
-                    if( this->handrank < other.handrank) return true;
-                    if( this->maincard > other.maincard) return false;
-                    if( this->maincard < other.maincard) return true;
-                    return false;
-                }
-            };
-            static ReducedFullHandRank nullRFHR;
-
-            std::map<ReducedFullHandRank, int> RFHRBetRelationship;
-            void updateRFHRBetRelationship(const std::vector<int>& vec_in); // unpacks an input vector of parameters to the RFHRBetRel
-    };
-
     struct MoveAwareAI : public Strategy {
         // follows a strategy based off of the moves of other players
         // only heads up games are supported
@@ -173,7 +135,10 @@ namespace Poker {
         PlayerMove unpackBinnedPlayerMove(BinnedPlayerMove m, int minimumBet, int bankroll);
         using Strategy::Strategy;
         PlayerMove makeMove(std::shared_ptr<Table> info, const shared_ptr<Player>) override;
-        unordered_map<ReducedGameState, unordered_map<BinnedPlayerMove, float>, RGSHash> CFRTable;       // Maps between the game state and probability to make each move
+        unordered_map<ReducedGameState, map<BinnedPlayerMove, float>, RGSHash> CFRTable;       // Maps between the game state and probability to make each move
+
+        void dumpCFRTableToFile(std::string outfile);
+        void loadCFRTableFromFile(std::string infile);
 
         template <typename T>
         static void hashCombine(size_t& seed, const T& v) {
@@ -202,17 +167,8 @@ namespace Poker {
     inline std::string getAIName(shared_ptr<SingleMoveCallAI> &a) { 
         return "call";
     }
-    inline std::string getAIName(shared_ptr<SequenceMoveAI> &a) { 
+    inline std::string getAIName(SequenceMoveAI*& a) { 
         return "sequence";
-    }
-    inline std::string getAIName(shared_ptr<FHRProportionalAI> &a) { 
-        return "fhrprop";
-    }
-    inline std::string getAIName(shared_ptr<HandStreetAwareAI> &a) {
-        return "handstreetaware";
-    }
-    inline std::string getAIName(shared_ptr<FHRAwareAI> &a) {
-        return "fhraware";
     }
 
 

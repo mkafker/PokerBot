@@ -63,6 +63,7 @@ namespace Poker {
         std::vector<Card*>     winningCards;
 
         // Maps galore!
+        // consider performance implications of moving to unordered_map
         std::map<Rank, std::vector<Card*>, RankDescendingOrder> ranks;
         std::unordered_map<Suit, std::vector<Card*>> suits;
     

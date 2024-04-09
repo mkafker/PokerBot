@@ -5,6 +5,7 @@
 #include <random>
 #include <vector>
 #include <algorithm>
+#include <chrono>
 
 namespace Poker {
     enum class Suit : char {
@@ -87,10 +88,12 @@ namespace Poker {
 
 
     class Deck {
+        private:
+            std::mt19937_64 rng;
         public:
             std::vector<Card> cards;         // array to hold cards
-            std::mt19937_64 mersenne;
             Deck() {
+                rng.seed(std::chrono::steady_clock::now().time_since_epoch().count());
                 constexpr int nRanks = 13;
                 for(int i=0; i<nRanks; i++) {
                     cards.emplace_back(Card(static_cast<Rank>(i), Suit::CLUB));
@@ -99,8 +102,9 @@ namespace Poker {
                     cards.emplace_back(Card(static_cast<Rank>(i), Suit::SPADE));
                 }
             }
+            void setSeed(uint64_t seed) { rng.seed(seed); }
             void shuffle() {
-                std::shuffle(cards.begin(), cards.end(), mersenne);
+                std::shuffle(cards.begin(), cards.end(), rng);
             }
             size_t size() const { return cards.size(); }
             const Card pop_card() {

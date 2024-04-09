@@ -11,15 +11,9 @@ namespace Poker {
   void benchmarkHandRankCalculator(const uint64_t& N) {
       auto start = std::chrono::steady_clock::now();
       FullHandRank lastHand;
-      int iT = 0;
-      std::random_device rd;
-      std::mt19937_64 g(rd());
       for(int iN = 0; iN < N; iN++) {
-          iT++;
           Deck newdeck;
-          newdeck.mersenne = g;
-          //newdeck.shuffle();          // will someone PLEASE tell me why this doesn't work
-          std::shuffle(newdeck.cards.begin(), newdeck.cards.end(), g);
+          newdeck.shuffle();          
           std::vector<Card> cards(7);
           for(short j=0; j<7; j++)
               cards[j]=newdeck.pop_card();
@@ -36,6 +30,7 @@ namespace Poker {
       std::cout << lastHand.handrank << " " << lastHand.maincards << "| " << lastHand.kickers << std::endl;
       std::cout << N << " hands calculated in " << duration.count() << " seconds, or " << double(N)/duration.count() << " hands/second" << std::endl;
   }
+
   void benchmarkRounds(uint64_t N) {
     auto params = std::multimap<std::string, std::vector<std::any>>();
     params.emplace("call", std::vector<std::any>{});
@@ -54,8 +49,6 @@ namespace Poker {
   }
 
 void monteCarloGameStateCompare() {
-    std::random_device rd;
-    auto start = chrono::steady_clock::now();
     int iT = 0;
     auto myTable = Table();
     // populate player list
@@ -80,7 +73,6 @@ void monteCarloGameStateCompare() {
         playerOne->strategy = make_unique<SequenceMoveAI>(newStrat);
         // player 0 should do nothing but all-in now
     }
-
     game->doRound();
 }
 
@@ -89,7 +81,6 @@ std::tuple<double, double> monteCarloRounds(const uint64_t& N, const std::multim
     // Returns (avg win rate, variance of win rate) of player 0
     // Create Table and fill AI List
     auto myTable = Table();
-    // unpack AI list
     std::vector<string> aiStrings;
     std::vector<std::vector<std::any>> aiParams;
     for(auto& pair : aiInfo) {
@@ -113,7 +104,6 @@ std::tuple<double, double> monteCarloRounds(const uint64_t& N, const std::multim
     vector<int> pZeroWinnings (N);
     int startingCash = 100;
 
-    auto start = std::chrono::steady_clock::now();
     int iN = 0;
     while( iN < N ) {
       // Resets game, does a single round, tallies winnings
@@ -125,12 +115,10 @@ std::tuple<double, double> monteCarloRounds(const uint64_t& N, const std::multim
       iN++;
       pZeroWinnings[iN] = (game->table.getPlayerByID(0)->bankroll - startingCash)/myTable.bigBlind; // dimensionless winnings
     }
+    // TEMP TEMP TEMP
+    auto pZeroStrat = dynamic_pointer_cast<CFRAI1>(game->table.getPlayerByID(0)->strategy);
+    pZeroStrat->dumpCFRTableToFile("output.txt");
 
-    std::chrono::duration<double> duration = std::chrono::steady_clock::now() - start;
-    //std::cout << N << " games (" << totalRounds << " rounds) calculated in " << duration.count() << " seconds, or " 
-    //<< double(N)/duration.count() << " games/s (" << double(totalRounds)/duration.count() << " rounds/s)" << std::endl;
-    //std::cout << N << " rounds calculated in " << duration.count() << " seconds, or " << double(N)/duration.count() << " rounds/s" << std::endl;
-    //std::cout << "Player 0 wins: " << playerIDWinCount[0] << std::endl;
     double avgReturn = 0.0;
     for( const auto& w : pZeroWinnings )
         avgReturn += w;
@@ -142,7 +130,6 @@ std::tuple<double, double> monteCarloRounds(const uint64_t& N, const std::multim
     }
     sigmaReturn /= N;
     sigmaReturn = sqrt(sigmaReturn);
-    std::cout << "Return: " << avgReturn << " (" << sqrt(sigmaReturn) << ")" << std::endl;
     return std::make_tuple(avgReturn, sigmaReturn);
 }
 
@@ -157,6 +144,7 @@ std::tuple<double, double> monteCarloGames(const uint64_t& N, const std::multima
       aiStrings.emplace_back(std::get<0>(pair));
       aiParams.emplace_back(std::get<1>(pair));
     }
+    
     myTable.setPlayerList(aiStrings);
     for( int i=0; i<aiStrings.size(); i++ ) {
       // Table is filled according to same order as aiStrings
@@ -200,7 +188,6 @@ std::tuple<double, double> monteCarloGames(const uint64_t& N, const std::multima
     }
     sigmaReturn /= N;
     sigmaReturn = sqrt(sigmaReturn);
-    std::cout << "Return: " << avgReturn << " (" << sigmaReturn << ")" << std::endl;
     return std::make_tuple(avgReturn, sigmaReturn);
 }
 
@@ -220,7 +207,6 @@ std::tuple<double,double> monteCarloSingleHand(const std::vector<Card>& cardsA, 
         std::vector<Card> cardsAMutable(cardsA);
         //make new deck without players' cards
         Deck newdeck(cardsA);
-        newdeck.mersenne = g;
         newdeck.shuffle();
         // deal community cards
         for(short j=0; j<numCommCards; j++)
@@ -254,9 +240,7 @@ std::tuple<double,double> monteCarloSingleHand(const std::vector<Card>& cardsA, 
     //std::cout << N << " hands calculated in " << duration.count() << " seconds, or " << double(N)/duration.count() << " hands/second" << std::endl;
     double sigma = 0.0;
     for(auto& e : outcomes)
-    {
         sigma += (e - winRateA)*(e - winRateA);
-    }
     sigma /= N;
     sigma = sqrt(sigma);
     return std::make_tuple(winRateA, sigma);
@@ -283,7 +267,6 @@ std::tuple<double,double> monteCarloSingleHand(const std::vector<Card>& cardsA, 
         std::vector<Card> cardsAMutable(cardsA);
         //make new deck without players' cards
         Deck newdeck(cardsUnion);
-        newdeck.mersenne = g;
         newdeck.shuffle();
         // deal other player's cards
         for( auto& v : otherPlayerCards ) {
@@ -343,7 +326,6 @@ std::tuple<double,double> monteCarloSingleHand(const std::vector<Card>& cardsA, 
         std::vector<Card> cardsBMutable(cardsB);
         //make new deck without players' cards
         Deck newdeck(cardsUnion);
-        newdeck.mersenne = g;
         newdeck.shuffle();
         for(short j=0; j<numComCards; j++)
             communityCards[j]=newdeck.pop_card();

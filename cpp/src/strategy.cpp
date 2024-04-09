@@ -1,5 +1,9 @@
 #include "strategy.h"
 #include "player.h"
+#include <string>
+#include <iostream>
+#include <sstream>
+#include <fstream>
 namespace Poker {
     
     PlayerMove Strategy::makeMove(std::shared_ptr<Table> info, const shared_ptr<Player> p) {
@@ -71,88 +75,6 @@ namespace Poker {
         return myMove;
     }
     
-    PlayerMove FHRProportionalAI::makeMove(shared_ptr<Table> info, const shared_ptr<Player> p) {
-      auto clamp = [](int a, int b, int c) -> int { if(a<b) a=b; if(a>c) a=c; return a;};
-      vector<Card> pHand = p->hand;
-      vector<Card> allCards = info->communityCards;
-      allCards.insert(allCards.begin(), pHand.begin(), pHand.end());
-      FullHandRank myFHR = calcFullHandRank(allCards);
-
-      PlayerMove myMove;
-      if ( info->street == 0) {
-        // if preflop, call no matter what
-        myMove.bet_amount = info->minimumBet;
-        myMove.move = Move::MOVE_CALL;
-      }
-      else {
-        const auto cutoffBadDecentHand = HandRank::HIGH_CARD;
-        const auto cutoffDecentGoodHand = HandRank::TWO_PAIR;
-        const auto cutoffGoodGreatHand =  HandRank::FLUSH;
-        if( myFHR.handrank < cutoffBadDecentHand ) {
-            myMove.bet_amount = 0;
-            myMove.move = Move::MOVE_FOLD;
-        } else {
-          if ( myFHR.handrank < cutoffDecentGoodHand ) {
-            myMove.bet_amount = info->minimumBet;
-            myMove.move = Move::MOVE_CALL;
-          }
-          if ( myFHR.handrank < cutoffGoodGreatHand ) {
-            myMove.bet_amount = info->minimumBet * 2;
-            myMove.move = Move::MOVE_RAISE;
-          }
-          else {
-            myMove.bet_amount = p->bankroll;
-            myMove.move = Move::MOVE_ALLIN;
-          }
-
-        }
-
-      }
-      myMove.bet_amount = clamp(myMove.bet_amount, 0, p->bankroll);
-      if( myMove.bet_amount == p->bankroll ) myMove.move = Move::MOVE_ALLIN;
-      return myMove;
-    }
-    
-    
-    PlayerMove HandStreetAwareAI::makeMove(shared_ptr<Table> info, const shared_ptr<Player> p) {
-      auto clamp = [](int& a, const int& b, const int& c)  { if(a<b) a=b; if(a>c) a=c;};
-      vector<Card> pHand = p->hand;
-      vector<Card> allCards = info->communityCards;
-      allCards.insert(allCards.begin(), pHand.begin(), pHand.end());
-      FullHandRank myFHR = calcFullHandRank(allCards);
-      
-      PlayerMove myMove = betAmountToMove(        streetRBR[info->street][myFHR.handrank] * info->bigBlind,     info, p);
-      return myMove;
-    }
-
-    PlayerMove FHRAwareAI::makeMove(shared_ptr<Table> info, const shared_ptr<Player> p) {
-      vector<Card> pHand = p->hand;
-      vector<Card> allCards = info->communityCards;
-      allCards.insert(allCards.begin(), pHand.begin(), pHand.end());
-      FullHandRank myFHR = calcFullHandRank(allCards);
-      ReducedFullHandRank RFHR;
-      RFHR.handrank = myFHR.handrank;
-      // max is probably unnecessary
-      RFHR.maincard = *min(myFHR.maincards.begin(), myFHR.maincards.end()); // min actually returns the max rank very cool
-      PlayerMove myMove = betAmountToMove(        RFHRBetRelationship[RFHR] * info->bigBlind,     info, p);
-      return myMove;
-    }
-    void FHRAwareAI::updateRFHRBetRelationship(const vector<int>& vec_in) {
-      // expected # of parameters: 13 card ranks * 9 hand ranks = 117
-      // hand rank major order
-      if( vec_in.size() != 117 ) throw;
-      for(int hr_id=0; hr_id<9; hr_id++){
-        for(int c_id=0; c_id<13; c_id++) {
-          const int v_id= hr_id*13 + c_id;
-          Card c = {static_cast<Rank>(c_id), static_cast<Suit>('X')};
-          ReducedFullHandRank r;
-          r.handrank =  static_cast<HandRank>(hr_id+1);
-          r.maincard = c;
-          this->RFHRBetRelationship[r] = vec_in[v_id];
-        }
-      }
-    }
-
 
     PlayerMove MoveAwareAI::makeMove(shared_ptr<Table> info, const shared_ptr<Player> p) {
       // Set me to playerID = 0
@@ -172,7 +94,7 @@ namespace Poker {
       ReducedGameState myRGS = packTableIntoReducedGameState(*info);
       PlayerMove myPMove;
 
-      unordered_map<BinnedPlayerMove, float> probMap;
+      map<BinnedPlayerMove, float> probMap;
       std::random_device rd;
       std::mt19937_64 gen(rd());
 
@@ -200,7 +122,7 @@ namespace Poker {
       }
 
       // Sample the choices according to the prob dist
-        std::uniform_real_distribution<float> dist(0.0f, tot);
+      std::uniform_real_distribution<float> dist(0.0f, tot);
       float choice = dist(gen);
       float partialSum = 0.0f;
       BinnedPlayerMove bpm;
@@ -262,6 +184,41 @@ namespace Poker {
         ret.bet_amount = 0;
       }
       return ret;
+    }
+    
+    void CFRAI1::dumpCFRTableToFile(std::string outfile) {
+      // Transform a reduced game state to a string
+      std::ostringstream oss;
+      auto RGSintoStream = [&oss] (ReducedGameState rgs) {
+          oss << rgs.position << "," << rgs.street << ",";
+          oss << rgs.RFHR.handrank << "," << rgs.RFHR.maincard.get_rank() << ",";
+          for(const auto& pair : rgs.playerHistory) {
+            auto pos = pair.first;
+            std::vector<BinnedPlayerMove> moves = pair.second;
+            oss << pos << "," << moves.size() << ",";
+            for(int i=0; i<moves.size(); i++) {
+              oss << static_cast<int>(moves[i]) << ",";
+            }
+          }
+      };
+      
+      // Print RGS and probabilities on one line
+      for(const auto& pair : CFRTable) {
+        RGSintoStream(pair.first);
+        auto BPMprobmap = pair.second;
+        for(auto it = BPMprobmap.begin(); it != BPMprobmap.end(); it++) {
+          // print probabilities
+          oss << it->second; 
+          if(std::distance(it, BPMprobmap.end()) == 1) oss << std::endl;
+          else oss << ",";
+        }
+      }
+
+      // Output to file
+      std::ofstream outFile(outfile);
+      if( !outFile ) throw;
+      outFile << oss.str();
+      outFile.close();
     }
 
 
