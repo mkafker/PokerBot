@@ -115,6 +115,7 @@ std::tuple<double, double> monteCarloRounds(const uint64_t& N, const std::multim
       iN++;
       pZeroWinnings[iN] = (game->table.getPlayerByID(0)->bankroll - startingCash)/myTable.bigBlind; // dimensionless winnings
     }
+
     // TEMP TEMP TEMP
     auto pZeroStrat = dynamic_pointer_cast<CFRAI1>(game->table.getPlayerByID(0)->strategy);
     pZeroStrat->dumpCFRTableToFile("output.txt");

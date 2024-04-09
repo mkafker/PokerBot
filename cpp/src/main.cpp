@@ -20,7 +20,7 @@ int main() {
     params.emplace("call", std::vector<std::any>{});
 
     auto start = std::chrono::steady_clock::now();
-    constexpr int N = 100;
+    constexpr int N = 10000;
     auto [avgr, stddevr] = monteCarloRounds(N, params);
     //benchmarkHandRankCalculator(N);
     std::cout << avgr << " (" << stddevr << ")" << std::endl;

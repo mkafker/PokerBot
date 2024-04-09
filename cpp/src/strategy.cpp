@@ -187,11 +187,14 @@ namespace Poker {
     }
     
     void CFRAI1::dumpCFRTableToFile(std::string outfile) {
+      std::ofstream outFile(outfile);
+      if( !outFile ) throw;
+
       // Transform a reduced game state to a string
       std::ostringstream oss;
       auto RGSintoStream = [&oss] (ReducedGameState rgs) {
           oss << rgs.position << "," << rgs.street << ",";
-          oss << rgs.RFHR.handrank << "," << rgs.RFHR.maincard.get_rank() << ",";
+          oss << static_cast<int>(rgs.RFHR.handrank) << "," << rgs.RFHR.maincard.get_rank() << ",";
           for(const auto& pair : rgs.playerHistory) {
             auto pos = pair.first;
             std::vector<BinnedPlayerMove> moves = pair.second;
@@ -212,12 +215,9 @@ namespace Poker {
           if(std::distance(it, BPMprobmap.end()) == 1) oss << std::endl;
           else oss << ",";
         }
+        outFile << oss.str();
       }
 
-      // Output to file
-      std::ofstream outFile(outfile);
-      if( !outFile ) throw;
-      outFile << oss.str();
       outFile.close();
     }
 
