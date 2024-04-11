@@ -4,8 +4,11 @@
 #include "player.h"
 #include "game.h"
 #include "strategy.h"
+#include "pybindings.h"
 #include <chrono>
 #include <any>
+#include <fstream>
+#include <sstream>
 
 namespace Poker {
   void benchmarkHandRankCalculator(const uint64_t& N) {
@@ -104,6 +107,10 @@ std::tuple<double, double> monteCarloRounds(const uint64_t& N, const std::multim
     vector<int> pZeroWinnings (N);
     int startingCash = 100;
 
+    // TEMP TEMP TEMP
+    auto pZeroStrat = dynamic_pointer_cast<CFRAI1>(game->table.getPlayerByID(0)->strategy);
+    pZeroStrat->loadCFRTableFromFile("output.txt");
+
     int iN = 0;
     while( iN < N ) {
       // Resets game, does a single round, tallies winnings
@@ -117,7 +124,6 @@ std::tuple<double, double> monteCarloRounds(const uint64_t& N, const std::multim
     }
 
     // TEMP TEMP TEMP
-    auto pZeroStrat = dynamic_pointer_cast<CFRAI1>(game->table.getPlayerByID(0)->strategy);
     pZeroStrat->dumpCFRTableToFile("output.txt");
 
     double avgReturn = 0.0;
@@ -252,33 +258,29 @@ std::tuple<double,double> monteCarloSingleHand(const std::vector<Card>& cardsA, 
 std::tuple<double,double> monteCarloSingleHand(const std::vector<Card>& cardsA, const std::vector<Card>& commCards, const int numOtherPlayers, const uint64_t N) {
     // returns Avg win rate and standard deviation
     std::vector<short> outcomes(N, 0);
-    std::random_device rd;
     uint64_t winCountA = 0;
     std::vector<std::vector<Card>> otherPlayerCards(numOtherPlayers);
 
     std::vector<Card> cardsUnion (cardsA);
     cardsUnion.insert(cardsUnion.end(), commCards.begin(), commCards.end());
     
-    auto start = std::chrono::steady_clock::now();
-    winCountA = 0;
+    const FullHandRank fhrA = calcFullHandRank(cardsUnion);
+
+    std::random_device rd;
     for(int iN = 0; iN < N; iN++) {
-        std::mt19937_64 g(rd());
-        std::vector<Card> communityCards(commCards);
-        const size_t numCommCards = commCards.size();
-        std::vector<Card> cardsAMutable(cardsA);
         //make new deck without players' cards
         Deck newdeck(cardsUnion);
-        newdeck.shuffle();
+        //newdeck.shuffle();
+        std::mt19937_64 g(rd());
+        std::shuffle(newdeck.cards.begin(), newdeck.cards.end(), g);
         // deal other player's cards
         for( auto& v : otherPlayerCards ) {
             v.clear();
             v.emplace_back( newdeck.pop_card() );
             v.emplace_back( newdeck.pop_card() );
-            v.insert(v.end(), communityCards.begin(), communityCards.end());
+            v.insert(v.end(), commCards.begin(), commCards.end());
         }
-        cardsAMutable.insert(cardsAMutable.end(), communityCards.begin(), communityCards.end());
 
-        const FullHandRank fhrA = calcFullHandRank(cardsAMutable);
         bool aWins = true;
         for(auto& v : otherPlayerCards) {
             auto otherGuyFHR = calcFullHandRank(v);
@@ -292,7 +294,6 @@ std::tuple<double,double> monteCarloSingleHand(const std::vector<Card>& cardsA, 
         }
     }
 
-    std::chrono::duration<double> duration = std::chrono::steady_clock::now() - start;
     const double winRateA = double(winCountA)/N;
     //std::cout << "A winrate: " << winRateA*100.0 << "%" << std::endl;
     //std::cout << N << " hands calculated in " << duration.count() << " seconds, or " << double(N)/duration.count() << " hands/second" << std::endl;
@@ -321,7 +322,6 @@ std::tuple<double,double> monteCarloSingleHand(const std::vector<Card>& cardsA, 
       winCountA = 0;
       winCountB = 0;
       for(int iN = 0; iN < N; iN++) {
-        std::mt19937_64 g(rd());
         std::vector<Card> communityCards(numComCards);
         std::vector<Card> cardsAMutable(cardsA);
         std::vector<Card> cardsBMutable(cardsB);
@@ -355,6 +355,47 @@ std::tuple<double,double> monteCarloSingleHand(const std::vector<Card>& cardsA, 
 
 
 
+void monteCarloRandomHand(const int numCommCards, const int numOtherPlayers, const uint64_t numHands, const uint64_t numHandMC, std::string outFileName) {
+    // Generates a random hand and community cards
+    // Records them to a file as well as the likelihood of winning with that hand
+
+    std::ofstream outFile(outFileName, std::ios_base::app);
+    if( !outFile ) throw;
+    std::ostringstream oss;
+    std::random_device rd;
+    std::mt19937_64 g(rd());
+    for(int iN=0; iN<numHands; iN++) {
+        Deck newdeck;
+        //newdeck.setSeed(rd());
+        //newdeck.shuffle();
+        std::shuffle(newdeck.cards.begin(), newdeck.cards.end(), g);
+        std::vector<Card> commCards(numCommCards);
+        std::vector<Card> myCards(2);
+
+        // deal community cards
+        for(short j=0; j<numCommCards; j++)
+            commCards[j]=newdeck.pop_card();
+        myCards[0]=newdeck.pop_card();
+        myCards[1]=newdeck.pop_card();
+
+        auto [avg, sigma] = monteCarloSingleHand( myCards, commCards, numOtherPlayers, numHandMC );
+        std::vector<Card> allCards = myCards;
+        allCards.insert(allCards.end(), commCards.begin(), commCards.end());
+        std::vector<std::tuple<int, int>> charlesFormatCards = convertMikeToCharles(allCards);
+        for(auto& pair : charlesFormatCards) {
+            oss << std::get<0>(pair) << "," << std::get<1>(pair) << ",";
+        }
+        oss << avg;
+        oss << std::endl;
+        outFile << oss.str();
+    }
+
+    outFile.close();
+
+
+
+}
+    
 
 
 

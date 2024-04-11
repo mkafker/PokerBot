@@ -17,4 +17,5 @@ namespace Poker {
 
   std::tuple<double, double> monteCarloRounds(const uint64_t& N, const std::multimap<std::string, std::vector<std::any>>& aiInfo);
   std::tuple<double, double> monteCarloGames(const uint64_t& N, const std::multimap<std::string, std::vector<std::any>>& aiInfo);
+  void monteCarloRandomHand(const int numCommCards, const int numOtherPlayers, const uint64_t numHands, const uint64_t numHandMC, std::string outFileName);
 }

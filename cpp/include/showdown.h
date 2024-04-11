@@ -64,6 +64,9 @@ namespace Poker {
 
     const FullHandRank& showdownFHR(const FullHandRank& A, const FullHandRank& B);
 
+
+
+    FullHandRank generateRandomFHR();
 };
 
 

@@ -93,13 +93,15 @@ namespace Poker {
         public:
             std::vector<Card> cards;         // array to hold cards
             Deck() {
-                rng.seed(std::chrono::steady_clock::now().time_since_epoch().count());
+                cards = std::vector<Card>(52);
+                std::random_device rd;
+                rng.seed(rd());
                 constexpr int nRanks = 13;
                 for(int i=0; i<nRanks; i++) {
-                    cards.emplace_back(Card(static_cast<Rank>(i), Suit::CLUB));
-                    cards.emplace_back(Card(static_cast<Rank>(i), Suit::DIAMOND));
-                    cards.emplace_back(Card(static_cast<Rank>(i), Suit::HEART));
-                    cards.emplace_back(Card(static_cast<Rank>(i), Suit::SPADE));
+                    cards[4*i]  =Card(static_cast<Rank>(i), Suit::CLUB);
+                    cards[4*i+1]=Card(static_cast<Rank>(i), Suit::DIAMOND);
+                    cards[4*i+2]=Card(static_cast<Rank>(i), Suit::HEART);
+                    cards[4*i+3]=Card(static_cast<Rank>(i), Suit::SPADE);
                 }
             }
             void setSeed(uint64_t seed) { rng.seed(seed); }
@@ -118,22 +120,29 @@ namespace Poker {
                 cards.emplace_back(a);
             }
             Deck(std::vector<Card> cardComplement) {
-              // Deck constructor for all cards EXCEPT the argument
-              // TODO: make this fast
-              constexpr int nRanks = 13;
-              for(int i=0; i<nRanks; i++) {
-                  cards.emplace_back(Card(static_cast<Rank>(i), Suit::CLUB));
-                  cards.emplace_back(Card(static_cast<Rank>(i), Suit::DIAMOND));
-                  cards.emplace_back(Card(static_cast<Rank>(i), Suit::HEART));
-                  cards.emplace_back(Card(static_cast<Rank>(i), Suit::SPADE));
-              }
-              for(Card c : cardComplement) {
-                auto it = std::find(cards.begin(), cards.end(), c);
-                if( *it == c)
-                  cards.erase(it);
-              }
+            // Deck constructor for all cards EXCEPT the argument
+            // TODO: make this fast
+            std::random_device rd;
+            rng.seed(rd());
+            constexpr int nRanks = 13;
+            cards = std::vector<Card>(52);
+            for(int i=0; i<nRanks; i++) {
+                cards[4*i]  =Card(static_cast<Rank>(i), Suit::CLUB);
+                cards[4*i+1]=Card(static_cast<Rank>(i), Suit::DIAMOND);
+                cards[4*i+2]=Card(static_cast<Rank>(i), Suit::HEART);
+                cards[4*i+3]=Card(static_cast<Rank>(i), Suit::SPADE);
+            }
+            for(Card c : cardComplement) {
+            auto it = std::find(cards.begin(), cards.end(), c);
+            if( *it == c)
+                cards.erase(it);
+            }
             }
     };
+
+
+
+
     inline std::ostream& operator<<(std::ostream& stream, Deck &a) { 
         for(int i=0; i<a.size(); i++ )
             stream << a.cards[i] << " ";

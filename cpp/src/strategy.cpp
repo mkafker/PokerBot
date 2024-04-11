@@ -187,18 +187,18 @@ namespace Poker {
     }
     
     void CFRAI1::dumpCFRTableToFile(std::string outfile) {
-      std::ofstream outFile(outfile);
+      std::ofstream outFile(outfile, std::ios_base::app);
       if( !outFile ) throw;
 
       // Transform a reduced game state to a string
       std::ostringstream oss;
       auto RGSintoStream = [&oss] (ReducedGameState rgs) {
-          oss << rgs.position << "," << rgs.street << ",";
-          oss << static_cast<int>(rgs.RFHR.handrank) << "," << rgs.RFHR.maincard.get_rank() << ",";
+          oss << static_cast<int>(rgs.position) << "," << rgs.street << ",";
+          oss << static_cast<int>(rgs.RFHR.handrank) << "," << static_cast<int>(rgs.RFHR.maincard.get_rank()) << ",";
           for(const auto& pair : rgs.playerHistory) {
             auto pos = pair.first;
             std::vector<BinnedPlayerMove> moves = pair.second;
-            oss << pos << "," << moves.size() << ",";
+            oss << static_cast<int>(pos) << "," << moves.size() << ",";
             for(int i=0; i<moves.size(); i++) {
               oss << static_cast<int>(moves[i]) << ",";
             }
@@ -217,9 +217,69 @@ namespace Poker {
         }
         outFile << oss.str();
       }
-
       outFile.close();
     }
+    void CFRAI1::loadCFRTableFromFile(std::string infile) {
+      std::ifstream inFile(infile);
+      if( !inFile ) throw;
+      unordered_map<ReducedGameState, map<BinnedPlayerMove, float>, RGSHash> tableIn;
+      std::vector<std::vector<std::string>> data;
+      std::string line;
+      while(std::getline(inFile, line)) {
+        std::vector<std::string> row;
+        std::stringstream ss(line);
+        std::string field;
+        while (std::getline(ss, field, ',')) {
+          row.push_back(field);
+        }
+        data.push_back(row);
+      }
+
+      for(auto& row : data) {
+        // key
+        ReducedGameState rgs;
+        rgs.position = static_cast<PlayerPosition>(std::stoi(row[0]));
+        rgs.street =          std::stoi(row[1]);
+        rgs.RFHR.handrank = static_cast<HandRank>(std::stoi(row[2]));
+        Card main;
+        main.rank = static_cast<Rank>(std::stoi(row[3]));
+        rgs.RFHR.maincard = main;
+        
+        unordered_map<PlayerPosition, vector<BinnedPlayerMove>, PlayerPositionHash> pHistory;
+        size_t ind = 4;
+        size_t runningInd = 0;
+        while(typeid(row[ind]) != typeid(float)) {
+          PlayerPosition pp = static_cast<PlayerPosition>(std::stoi(row[ind]));
+          size_t bpmv_ld = std::stoi(row[ind+1]);
+          vector<BinnedPlayerMove> bpmv;
+          for(int j=0; j < bpmv_ld; j++){
+            bpmv.emplace_back(static_cast<BinnedPlayerMove>(std::stoi(row[ind+2+j])));
+          }
+          ind += 2 + bpmv_ld;
+          pHistory[pp] = bpmv;
+        }
+        rgs.playerHistory = pHistory;
+
+        vector<float> probs;
+        for(size_t j=0; j < 4; j++) {   // CHANGE THIS is the number of BinnedPlayerMoves increases!
+          probs[j] = std::stof(row[ind+j]);
+        }
+
+        map<BinnedPlayerMove, float> probMap;
+        probMap[BinnedPlayerMove::Fold] = probs[0];
+        probMap[BinnedPlayerMove::Call] = probs[1];
+        probMap[BinnedPlayerMove::Raise] = probs[2];
+        probMap[BinnedPlayerMove::AllIn] = probs[3];
+
+        tableIn[rgs] = probMap;
+      }
+
+
+      inFile.close();
+      CFRTable = tableIn;
+
+    }
+
 
 
 

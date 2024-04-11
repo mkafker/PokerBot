@@ -120,6 +120,21 @@ std::vector<Card> convertCharlesToMike(std::vector<std::tuple<int,int>> in) {
     return out;
 }
 
+std::vector<std::tuple<int, int>> convertMikeToCharles(std::vector<Card> in) {
+  std::vector<std::tuple<int, int>> out;
+  for(auto& a : in) {
+    std::tuple<int, int> card;
+    std::get<0>(card) = static_cast<int>( a.get_rank()) + 2;
+    const Suit mySuit = a.get_suit();
+    if( mySuit == Suit::SPADE ) std::get<1>(card) = 1;
+    else if( mySuit == Suit::HEART ) std::get<1>(card) = 2;
+    else if( mySuit == Suit::DIAMOND ) std::get<1>(card) = 3;
+    else if( mySuit == Suit::CLUB ) std::get<1>(card) = 4;
+    out.emplace_back(card);
+  }
+  return out;
+}
+
 int pyShowdownHands(std::vector<std::tuple<int,int>> tupleIntsA, std::vector<std::tuple<int,int>> tupleIntsB, 
                     std::vector<std::tuple<int,int>> communityTupleInts) {
   // returns 0 if A won, 1 if B won, 2 if draw

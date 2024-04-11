@@ -44,6 +44,7 @@ namespace Poker {
               if( addCard ) ret.kickers.emplace_back(*itCards); \
               itCards++; \
           } \
+          ret.kickers.resize(std::min(5-ret.maincards.size(),ret.kickers.size())); \
           return ret;
 
     struct RankDescendingOrder {
@@ -234,6 +235,18 @@ namespace Poker {
       }
       // draw
       return nullFHR;
+  }
+
+
+
+  FullHandRank generateRandomFHR() {
+    Deck tmp;
+    tmp.shuffle();
+    std::vector<Card> tmphand(7);
+    for(auto& a : tmphand) 
+        a = tmp.pop_card();
+    
+    return calcFullHandRank(tmphand);
   }
 
 }

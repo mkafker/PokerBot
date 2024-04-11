@@ -50,6 +50,7 @@ namespace Poker{
         {PlayerPosition::POS_BTN    , "BTN"}
     };
 
+
     static std::vector<PlayerPosition> numPlayersToPositionList (const int n) {
         // Returns a lits of player positions in BETTING ORDER
         // For two player games, SB is also BTN,

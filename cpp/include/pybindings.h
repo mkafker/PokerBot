@@ -14,4 +14,6 @@ int pyShowdownHands(std::vector<std::tuple<int,int>> tupleIntsA, std::vector<std
 
 std::vector<Card> convertCharlesToMike(std::vector<std::tuple<int,int>> in); //converts cards from charles's convention to mine
 
+std::vector<std::tuple<int, int>> convertMikeToCharles(std::vector<Card> in); //ditto but in the other direction
+
 }

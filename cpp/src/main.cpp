@@ -13,8 +13,29 @@
 
 using namespace Poker;
 int main() {
+
+
+
+    constexpr int N = 10000;
+    auto start = std::chrono::steady_clock::now();
+    monteCarloRandomHand(3, 1, N, 1000, "HandMCout.csv");
+    std::chrono::duration<double> duration = std::chrono::steady_clock::now() - start;
+    std::cout << N << " hands calculated in " << duration.count() << " seconds, or " 
+    << double(N)/duration.count() << " hands/s" << std::endl;
+
+    /*
+    constexpr int N = 1000000;
+    auto start = std::chrono::steady_clock::now();
+    for(int i=0; i<N; i++)
+       generateRandomFHR();
+    std::chrono::duration<double> duration = std::chrono::steady_clock::now() - start;
+    std::cout << N << " hands calculated in " << duration.count() << " seconds, or " 
+    << double(N)/duration.count() << " hands/s" << std::endl;
+    */
+
+    /*
     auto params = std::multimap<std::string, std::vector<std::any>>();
-    params.emplace("CFRAI1", std::vector<std::any>{});
+    //params.emplace("CFRAI1", std::vector<std::any>{});
     params.emplace("Matt", std::vector<std::any> {0.44, 0.46, 0.54});
     params.emplace("call", std::vector<std::any>{});
     params.emplace("call", std::vector<std::any>{});
@@ -28,6 +49,7 @@ int main() {
     std::chrono::duration<double> duration = std::chrono::steady_clock::now() - start;
     std::cout << N << " rounds calculated in " << duration.count() << " seconds, or " 
     << double(N)/duration.count() << " rounds/s" << std::endl;
+    */
 
     //auto [avgg, stddevg] = monteCarloGames(1000, params);
     //std::cout << avgg << " (" << stddevg << ")" << std::endl;
