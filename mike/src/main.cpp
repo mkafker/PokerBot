@@ -13,12 +13,17 @@
 
 using namespace Poker;
 int main() {
-    constexpr int N = 200000000;
-    auto start = std::chrono::steady_clock::now();
-    monteCarloRandomHand(3, 1, N, 1000, "HandMCout.csv");
-    std::chrono::duration<double> duration = std::chrono::steady_clock::now() - start;
-    std::cout << N << " hands calculated in " << duration.count() << " seconds, or " 
-    << double(N)/duration.count() << " configurations/s" << std::endl;
+    constexpr int N = 200000;
+    constexpr int writeevery = 1000;
+    constexpr int nThreads = 6;
+
+    for(int i=0; i<N/writeevery; i++) {
+      auto start = std::chrono::steady_clock::now();
+      monteCarloRandomHand(3, 1, writeevery, 1000, "HandMCout.csv", nThreads);
+      std::chrono::duration<double> duration = std::chrono::steady_clock::now() - start;
+      std::cout << N/writeevery << " hands calculated in " << duration.count() << " seconds, or " 
+      << double(N/writeevery)/duration.count() << " configurations/s" << std::endl;
+    }
 
     /*
     constexpr int N = 1000000;

@@ -356,20 +356,19 @@ std::tuple<double,double> monteCarloSingleHand(const std::vector<Card>& cardsA, 
 
 
 
-void monteCarloRandomHand(const int numCommCards, const int numOtherPlayers, const uint64_t numHands, const uint64_t numHandMC, std::string outFileName) {
+void monteCarloRandomHand(const int numCommCards, const int numOtherPlayers, const uint64_t numHands, const uint64_t numHandMC, std::string outFileName, int numThreads) {
     // Generates a random hand and community cards
     // Records them to a file as well as the likelihood of winning with that hand
 
     std::ofstream outFile(outFileName, std::ios_base::app);
     if( !outFile ) throw;
 
-    int div = 6;
 
     auto doWork = [&]() {
         std::random_device rd;
         int prntCnt = 0;
         std::string ret;
-        for(int iN=0; iN<numHands/div; iN++) {
+        for(int iN=0; iN<numHands/numThreads; iN++) {
             std::ostringstream oss;
             Deck newdeck;
             newdeck.setSeed(rd());
@@ -403,7 +402,7 @@ void monteCarloRandomHand(const int numCommCards, const int numOtherPlayers, con
 
     std::vector<std::future<std::string>> futures;
     std::vector<std::string> results;
-    for(int j = 0; j < div; j++)
+    for(int j = 0; j < numThreads; j++)
         futures.emplace_back(std::async(std::launch::async, doWork));
     for( auto& fut : futures) 
         results.push_back(fut.get());
