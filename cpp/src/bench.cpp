@@ -9,6 +9,8 @@
 #include <any>
 #include <fstream>
 #include <sstream>
+#include <thread>
+#include <future>
 
 namespace Poker {
   void benchmarkHandRankCalculator(const uint64_t& N) {
@@ -270,9 +272,8 @@ std::tuple<double,double> monteCarloSingleHand(const std::vector<Card>& cardsA, 
     for(int iN = 0; iN < N; iN++) {
         //make new deck without players' cards
         Deck newdeck(cardsUnion);
-        //newdeck.shuffle();
-        std::mt19937_64 g(rd());
-        std::shuffle(newdeck.cards.begin(), newdeck.cards.end(), g);
+        newdeck.setSeed(rd());
+        newdeck.shuffle();
         // deal other player's cards
         for( auto& v : otherPlayerCards ) {
             v.clear();
@@ -361,38 +362,54 @@ void monteCarloRandomHand(const int numCommCards, const int numOtherPlayers, con
 
     std::ofstream outFile(outFileName, std::ios_base::app);
     if( !outFile ) throw;
-    std::ostringstream oss;
-    std::random_device rd;
-    std::mt19937_64 g(rd());
-    for(int iN=0; iN<numHands; iN++) {
-        Deck newdeck;
-        //newdeck.setSeed(rd());
-        //newdeck.shuffle();
-        std::shuffle(newdeck.cards.begin(), newdeck.cards.end(), g);
-        std::vector<Card> commCards(numCommCards);
-        std::vector<Card> myCards(2);
 
-        // deal community cards
-        for(short j=0; j<numCommCards; j++)
-            commCards[j]=newdeck.pop_card();
-        myCards[0]=newdeck.pop_card();
-        myCards[1]=newdeck.pop_card();
+    int div = 6;
 
-        auto [avg, sigma] = monteCarloSingleHand( myCards, commCards, numOtherPlayers, numHandMC );
-        std::vector<Card> allCards = myCards;
-        allCards.insert(allCards.end(), commCards.begin(), commCards.end());
-        std::vector<std::tuple<int, int>> charlesFormatCards = convertMikeToCharles(allCards);
-        for(auto& pair : charlesFormatCards) {
-            oss << std::get<0>(pair) << "," << std::get<1>(pair) << ",";
+    auto doWork = [&]() {
+        std::random_device rd;
+        int prntCnt = 0;
+        std::string ret;
+        for(int iN=0; iN<numHands/div; iN++) {
+            std::ostringstream oss;
+            Deck newdeck;
+            newdeck.setSeed(rd());
+            newdeck.shuffle();
+            std::vector<Card> commCards(numCommCards);
+            std::vector<Card> myCards(2);
+
+            // deal community cards
+            for(short j=0; j<numCommCards; j++)
+                commCards[j]=newdeck.pop_card();
+            myCards[0]=newdeck.pop_card();
+            myCards[1]=newdeck.pop_card();
+
+            auto [avg, sigma] = monteCarloSingleHand( myCards, commCards, numOtherPlayers, numHandMC );
+            std::vector<Card> allCards = myCards;
+            allCards.insert(allCards.end(), commCards.begin(), commCards.end());
+            std::vector<std::tuple<int, int>> charlesFormatCards = convertMikeToCharles(allCards);
+            for(auto& pair : charlesFormatCards) {
+                oss << std::get<0>(pair) << "," << std::get<1>(pair) << ",";
+            }
+            oss << avg;
+            oss << std::endl;
+            ret.append(oss.str());
+            //if( ++prntCnt == 1000 ) {
+            //    prntCnt = 0;
+            //    std::cout << iN << "/" << numHands << std::endl;
+            //}
         }
-        oss << avg;
-        oss << std::endl;
-        outFile << oss.str();
-    }
+        return ret;
+    };
 
+    std::vector<std::future<std::string>> futures;
+    std::vector<std::string> results;
+    for(int j = 0; j < div; j++)
+        futures.emplace_back(std::async(std::launch::async, doWork));
+    for( auto& fut : futures) 
+        results.push_back(fut.get());
+    for( auto& str : results)
+        outFile << str;
     outFile.close();
-
-
 
 }
     
