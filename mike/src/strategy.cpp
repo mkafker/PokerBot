@@ -274,7 +274,6 @@ namespace Poker {
         tableIn[rgs] = probMap;
       }
 
-
       inFile.close();
       CFRTable = tableIn;
 

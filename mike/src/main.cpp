@@ -2,6 +2,7 @@
 #include <iomanip>
 #include <any>
 #include <chrono>
+#include <string>
 
 #include "card.h"
 #include "showdown.h"
@@ -13,16 +14,22 @@
 
 using namespace Poker;
 int main() {
-    constexpr int N = 200000;
-    constexpr int writeevery = 1000;
-    constexpr int nThreads = 6;
 
-    for(int i=0; i<N/writeevery; i++) {
-      auto start = std::chrono::steady_clock::now();
-      monteCarloRandomHand(3, 1, writeevery, 1000, "HandMCout.csv", nThreads);
-      std::chrono::duration<double> duration = std::chrono::steady_clock::now() - start;
-      std::cout << N/writeevery << " hands calculated in " << duration.count() << " seconds, or " 
-      << double(N/writeevery)/duration.count() << " configurations/s" << std::endl;
+    constexpr int N = 2000;
+    constexpr int writeevery = 1000;
+    constexpr int nThreads = 10;
+    
+    for(int nCards=3; nCards<=5; nCards++) {
+      for(int i=0; i<N/writeevery; i++) {
+        auto start = std::chrono::steady_clock::now();
+        for(int nOpp=1;nOpp<=5;nOpp++){
+          std::string out = "MCdata" + std::to_string(nCards) + "cards.csv";
+          monteCarloRandomHand(nCards, nOpp, writeevery, 1000, out, nThreads);
+        }
+        std::chrono::duration<double> duration = std::chrono::steady_clock::now() - start;
+        std::cout << 5*writeevery << " hands calculated in " << duration.count() << " seconds, or " 
+        << double(5*writeevery)/duration.count() << " configurations/s" << std::endl;
+      }
     }
 
     /*

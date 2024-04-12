@@ -386,6 +386,7 @@ void monteCarloRandomHand(const int numCommCards, const int numOtherPlayers, con
             std::vector<Card> allCards = myCards;
             allCards.insert(allCards.end(), commCards.begin(), commCards.end());
             std::vector<std::tuple<int, int>> charlesFormatCards = convertMikeToCharles(allCards);
+            oss << numOtherPlayers << ",";
             for(auto& pair : charlesFormatCards) {
                 oss << std::get<0>(pair) << "," << std::get<1>(pair) << ",";
             }
