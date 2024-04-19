@@ -12,7 +12,6 @@ namespace Poker {
         myMove.bet_amount = clamp(myMove.bet_amount, 0, p->bankroll);
         if( myMove.bet_amount == p->bankroll) myMove.move = Move::MOVE_ALLIN;
         return myMove;
-        
     }   
 
     PlayerMove SingleMoveCallAI::makeMove(std::shared_ptr<Table> info, const shared_ptr<Player> p) {
@@ -25,8 +24,9 @@ namespace Poker {
         if( myMove.bet_amount == p->bankroll) myMove.move = Move::MOVE_ALLIN;
         return myMove;
     }   
-
+    
     PlayerMove RandomAI::makeMove(std::shared_ptr<Table> info, const shared_ptr<Player> p) {
+
         // Performs a random valid move
         auto clamp = [](int a, int b, int c) -> int { if(a<b) a=b; if(a>c) a=c; return a;};
         std::random_device dev;
@@ -54,37 +54,6 @@ namespace Poker {
         if( myMove.bet_amount == p->bankroll) myMove.move = Move::MOVE_ALLIN;
         return myMove;
     }
-
-    PlayerMove CharlesAI::makeMove(std::shared_ptr<Table> info, const shared_ptr<Player> p) {
-        // Performs a random valid move
-        auto myHand = p->hand
-        auto clamp = [](int a, int b, int c) -> int { if(a<b) a=b; if(a>c) a=c; return a;};
-        std::random_device dev;
-        std::mt19937 rng(dev());
-        std::uniform_int_distribution<std::mt19937::result_type> dist4(1,4);
-        PlayerMove myMove;
-        switch( dist4(rng) ) {
-            case 1:
-                myMove.move = Move::MOVE_FOLD;
-                break;
-            case 2:
-                myMove.move = Move::MOVE_CALL;
-                break;
-            case 3:
-                myMove.move = Move::MOVE_RAISE;
-                break;
-            case 4:
-                myMove.move = Move::MOVE_ALLIN;
-        }
-        if( myMove.move == Move::MOVE_FOLD) myMove.bet_amount = 0;
-        else if( myMove.move == Move::MOVE_CALL) myMove.bet_amount = info->minimumBet;
-        else if( myMove.move == Move::MOVE_RAISE) myMove.bet_amount = info->minimumBet * 2;
-        else if( myMove.move == Move::MOVE_ALLIN) myMove.bet_amount = p->bankroll;
-        myMove.bet_amount = clamp(myMove.bet_amount, 0, p->bankroll);
-        if( myMove.bet_amount == p->bankroll) myMove.move = Move::MOVE_ALLIN;
-        return myMove;
-    }
-
     PlayerMove SequenceMoveAI::makeMove(std::shared_ptr<Table> info, const shared_ptr<Player> p) {
         // Performs a list of moves
         // If it reaches the end of its move sequence, repeats the last one
@@ -313,6 +282,40 @@ namespace Poker {
       }
       return myMove;
 
+    }
+
+
+    PlayerMove MattAI::makeMove(std::shared_ptr<Table> info, const shared_ptr<Player> p) {
+      int numOtherPlayers = info->playerList.size() - 1;
+      const double foldCallThres = thresholds[0];
+      const double callRaiseThres = thresholds[1];
+      const double raiseAllinThres = thresholds[2];
+      auto [avg, sigma] = monteCarloSingleHand(p->hand, info->communityCards, numOtherPlayers, 100);
+      //std::cout << "MATT SAYS: " << p->hand << " = " << matt << std::endl;
+      PlayerMove myMove;
+      if( avg < foldCallThres )
+        myMove.move = Move::MOVE_FOLD;
+      else if( avg < callRaiseThres )
+        myMove.move = Move::MOVE_CALL;
+      else if( avg < raiseAllinThres )
+        myMove.move = Move::MOVE_RAISE;
+      else
+        myMove.move = Move::MOVE_ALLIN;
+
+
+      if( myMove.move == Move::MOVE_FOLD) myMove.bet_amount = 0;
+      else if( myMove.move == Move::MOVE_CALL) myMove.bet_amount = info->minimumBet;
+      else if( myMove.move == Move::MOVE_RAISE) myMove.bet_amount = info->minimumBet * 2;
+      else if( myMove.move == Move::MOVE_ALLIN) myMove.bet_amount = p->bankroll;
+      myMove.bet_amount = clamp(myMove.bet_amount, 0, p->bankroll);
+      if( myMove.bet_amount == p->bankroll) myMove.move = Move::MOVE_ALLIN;
+
+      return myMove;
+
+    }
+
+    void MattAI::updateParametersImpl(std::vector<double> thresholds_in) {
+        thresholds = thresholds_in;
     }
 
 

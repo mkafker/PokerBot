@@ -1,12 +1,6 @@
-#include <array>
-#include <string>
-#include <unordered_map>
-#include <algorithm>
 #include <iostream>
-#include <vector>
-#include <memory>
-#include <chrono>
-#include <random>
+#include <iomanip>
+#include <any>
 
 #include "card.h"
 #include "showdown.h"
@@ -18,67 +12,44 @@
 
 using namespace Poker;
 int main() {
-    std::vector<Card> straightflush = {  Card(Rank::C_A, Suit::DIAMOND     ), 
-                                    Card(Rank::C_K, Suit::HEART  ),
-                                    Card(Rank::C_Q, Suit::HEART    ),
-                                    Card(Rank::C_J, Suit::HEART    ),
-                                    Card(Rank::C_T, Suit::HEART    ),
-                                    Card(Rank::C_3, Suit::DIAMOND    ),
-                                    Card(Rank::C_6, Suit::CLUB    ) };
-                                    
-    std::vector<Card> fourkind = {  Card(Rank::C_2, Suit::HEART     ), 
-                                    Card(Rank::C_2, Suit::HEART  ),
-                                    Card(Rank::C_2, Suit::DIAMOND    ),
-                                    Card(Rank::C_2, Suit::CLUB    ),
-                                    Card(Rank::C_T, Suit::HEART    ),
-                                    Card(Rank::C_9, Suit::HEART    ),
-                                    Card(Rank::C_6, Suit::CLUB    ) };
-                                    
+    auto params = std::multimap<std::string, std::vector<std::any>>();
+    //params.emplace("Matt", std::vector<std::any> {0.213, 0.318, 0.326});
+    params.emplace("Matt", std::vector<std::any> {0.19, 0.32, 0.66});
+    params.emplace("call", std::vector<std::any>{});
+    params.emplace("call", std::vector<std::any>{});
+    params.emplace("random", std::vector<std::any>{});
+
+    auto [avgr, stddevr] = monteCarloRounds(1000, params);
+    std::cout << avgr << " (" << stddevr << ")" << std::endl;
+
+    auto [avgg, stddevg] = monteCarloGames(1000, params);
+    std::cout << avgg << " (" << stddevg << ")" << std::endl;
 
 
-    std::vector<Card> theirCards  = { Card(Rank::C_5, Suit::DIAMOND), Card(Rank::C_J, Suit::SPADE) };
-
-
+    // Calculates pre-flop ranges
     /*
-    std::random_device rd;
-    std::mt19937_64 gen(rd());
-    std::uniform_int_distribution<int> dis(0,10);
-    double highestWR = 0.0;
-    std::vector<int> inputRBRraw (117,1);
-    auto bestRBR = inputRBRraw;
-
-    for(int j = 0; j < 10; j++ ) {
-        std::cout << "==========================================" << std::endl;
-        std::cout << "input = [";
-        for(auto& i : inputRBRraw) {
-            i = dis(gen);
-            std::cout << i << ", ";
-        }
-        std::cout << "]" << std::endl;
-
-        int N = 10000;
-        double result = Poker::pyMonteCarloGames( N,  inputRBRraw);
-        std::cout << "result = " << result << std::endl;
-        if( result > highestWR) {
-            highestWR = result;
-            bestRBR = inputRBRraw;
-        }
-    }
-    std::cout << "highest WR: " << highestWR << std::endl;
-    std::cout << "strategy: ";
-    for(auto& f : inputRBRraw) {
-        std::cout << f << " ";
-    }
+    vector<Suit> suitlist = { Suit::HEART, Suit::CLUB, Suit::DIAMOND, Suit::SPADE};
+    for(int j=0; j<13; j++) 
+        std::cout << std::setw(10) << static_cast<Rank>(j) << " ";
     std::cout << std::endl;
+    for(int i=0; i<13; i++) {
+        std::cout << static_cast<Rank>(i) << " ";
+        for(int j=0; j<13; j++) {
+            Card c1(static_cast<Rank>(i), Suit::HEART);
+            Card c2(static_cast<Rank>(j), Suit::HEART);
+            std::vector<Card> myCards = { c1, c2 };
+            auto a = monteCarloSingleHandStdDev(myCards, 5, 5, 5000);
+            auto WR = a[0];
+            auto var = a[1];
+            std::cout << std::fixed;
+            std::cout << std::setprecision(2) << std::setw(10);
+            std::cout << WR << " (" << var << ")";
+        }
+        std::cout << std::endl;
+    }
+    */
 
-*/
-    //Poker::pyMonteCarloGames(10);
-    std::vector<Card> myCards  = { Card(Rank::C_4, Suit::CLUB), Card(Rank::C_J, Suit::HEART) };
-    std::vector<Card> comCards  = { Card(Rank::C_2, Suit::HEART), 
-                                    Card(Rank::C_3, Suit::CLUB), 
-                                    Card(Rank::C_7, Suit::DIAMOND),
-                                    Card(Rank::C_T, Suit::DIAMOND) };
-    monteCarloSingleHand(myCards, comCards, 1, 5000000);
+    //monteCarloGames(10000, {"Matt", "call"});
 
     return 0;
 }

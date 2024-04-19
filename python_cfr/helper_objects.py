@@ -103,6 +103,10 @@ class Deck:
         return combinations
 
     def draw_random_cards(self, cardnum):
+        if cardnum == 0:
+            remaining_deck = Deck(1, 1)
+            remaining_deck.cards = copy.copy(self.cards)
+            return (), remaining_deck
         selected_cards = sorted(random.sample(list(self.cards), cardnum))
         remaining_deck = Deck(1, 1)
         remaining_deck.cards = copy.copy(self.cards)
