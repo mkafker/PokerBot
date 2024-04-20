@@ -9,8 +9,6 @@
 #include <any>
 #include <fstream>
 #include <sstream>
-#include <thread>
-#include <future>
 
 namespace Poker {
   void benchmarkHandRankCalculator(const uint64_t& N) {
@@ -109,10 +107,6 @@ std::tuple<double, double> monteCarloRounds(const uint64_t& N, const std::multim
     vector<int> pZeroWinnings (N);
     int startingCash = 100;
 
-    // TEMP TEMP TEMP
-    auto pZeroStrat = dynamic_pointer_cast<CFRAI1>(game->table.getPlayerByID(0)->strategy);
-    pZeroStrat->loadCFRTableFromFile("output.txt");
-
     int iN = 0;
     while( iN < N ) {
       // Resets game, does a single round, tallies winnings
@@ -125,8 +119,6 @@ std::tuple<double, double> monteCarloRounds(const uint64_t& N, const std::multim
       pZeroWinnings[iN] = (game->table.getPlayerByID(0)->bankroll - startingCash)/myTable.bigBlind; // dimensionless winnings
     }
 
-    // TEMP TEMP TEMP
-    pZeroStrat->dumpCFRTableToFile("output.txt");
 
     double avgReturn = 0.0;
     for( const auto& w : pZeroWinnings )
@@ -178,7 +170,8 @@ std::tuple<double, double> monteCarloGames(const uint64_t& N, const std::multima
         game->table.setPlayerBankrolls(startingCash);
         game->setup();
         game->doGame();
-        pZeroWinnings[iN] = (game->table.getPlayerByID(0)->bankroll - startingCash)/myTable.bigBlind; // dimensionless winnings
+        //pZeroWinnings[iN] = (game->table.getPlayerByID(0)->bankroll - startingCash)/myTable.bigBlind; // dimensionless winnings
+        pZeroWinnings[iN] = game->lastRoundWinner == game->table.getPlayerByID(0) ? 1 : 0;
         totalRounds+=game->nRounds;
     }
 
@@ -400,7 +393,7 @@ void monteCarloRandomHand(const int numCommCards, const int numOtherPlayers, con
         }
         return ret;
     };
-
+    /*
     std::vector<std::future<std::string>> futures;
     std::vector<std::string> results;
     for(int j = 0; j < numThreads; j++)
@@ -410,6 +403,7 @@ void monteCarloRandomHand(const int numCommCards, const int numOtherPlayers, con
     for( auto& str : results)
         outFile << str;
     outFile.close();
+    */
 
 }
     

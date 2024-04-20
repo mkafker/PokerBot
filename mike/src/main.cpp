@@ -14,7 +14,7 @@
 
 using namespace Poker;
 int main() {
-
+    /*
     constexpr int N = 2000;
     constexpr int writeevery = 1000;
     constexpr int nThreads = 10;
@@ -31,6 +31,7 @@ int main() {
         << double(5*writeevery)/duration.count() << " configurations/s" << std::endl;
       }
     }
+    */
 
     /*
     constexpr int N = 1000000;
@@ -42,23 +43,20 @@ int main() {
     << double(N)/duration.count() << " hands/s" << std::endl;
     */
 
-    /*
     auto params = std::multimap<std::string, std::vector<std::any>>();
     //params.emplace("CFRAI1", std::vector<std::any>{});
     params.emplace("Matt", std::vector<std::any> {0.44, 0.46, 0.54});
     params.emplace("call", std::vector<std::any>{});
-    params.emplace("call", std::vector<std::any>{});
+    //params.emplace("call", std::vector<std::any>{});
 
     auto start = std::chrono::steady_clock::now();
-    constexpr int N = 10000;
-    auto [avgr, stddevr] = monteCarloRounds(N, params);
-    //benchmarkHandRankCalculator(N);
+    constexpr int N = 5000;
+    auto [avgr, stddevr] = monteCarloGames(N, params);
     std::cout << avgr << " (" << stddevr << ")" << std::endl;
 
     std::chrono::duration<double> duration = std::chrono::steady_clock::now() - start;
     std::cout << N << " rounds calculated in " << duration.count() << " seconds, or " 
     << double(N)/duration.count() << " rounds/s" << std::endl;
-    */
 
     //auto [avgg, stddevg] = monteCarloGames(1000, params);
     //std::cout << avgg << " (" << stddevg << ")" << std::endl;
@@ -86,7 +84,6 @@ int main() {
     }
     */
 
-    //monteCarloGames(10000, {"Matt", "call"});
 
     return 0;
 }

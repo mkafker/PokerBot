@@ -166,15 +166,15 @@ double pyMCSingleHand(const std::vector<std::tuple<int,int>>& cardsA, const std:
 }
 
 double pyMonteCarloRounds(const uint64_t& N, std::vector<double> mattParams) {
-    auto params = std::multimap<std::string, std::vector<std::any>>();
+    auto AIList = std::multimap<std::string, std::vector<std::any>>();
     std::vector<std::any> mattParamsAny;
     for( const auto& v : mattParams)
       mattParamsAny.emplace_back(v);
-    params.emplace("Matt", mattParamsAny);
-    params.emplace("call", std::vector<std::any>{});
-    params.emplace("call", std::vector<std::any>{});
-    params.emplace("random", std::vector<std::any>{});
-    auto [avg, stddev] = monteCarloRounds(N, params);
+    AIList.emplace("Matt", mattParamsAny);
+    AIList.emplace("call", std::vector<std::any>{});
+    //params.emplace("call", std::vector<std::any>{});
+    //params.emplace("random", std::vector<std::any>{});
+    auto [avg, stddev] = monteCarloRounds(N, AIList);
     return avg;
 }
 
