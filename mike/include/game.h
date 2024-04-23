@@ -171,7 +171,6 @@ namespace Poker {
                 }
                 // TODO: clean this shit up!!! ^^^^^^
                 while( table.street < 4) {
-                     
                     table.dealCommunityCards( table.street );
                     
                     bool keepgoing = true;                                                            // indicates that we need another round of betting

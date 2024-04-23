@@ -33,16 +33,6 @@ int main() {
     }
     */
 
-    /*
-    constexpr int N = 1000000;
-    auto start = std::chrono::steady_clock::now();
-    for(int i=0; i<N; i++)
-       generateRandomFHR();
-    std::chrono::duration<double> duration = std::chrono::steady_clock::now() - start;
-    std::cout << N << " hands calculated in " << duration.count() << " seconds, or " 
-    << double(N)/duration.count() << " hands/s" << std::endl;
-    */
-
     auto params = std::multimap<std::string, std::vector<std::any>>();
     //params.emplace("CFRAI1", std::vector<std::any>{});
     params.emplace("Matt", std::vector<std::any> {0.44, 0.46, 0.54});
