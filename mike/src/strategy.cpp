@@ -334,6 +334,32 @@ namespace Poker {
         thresholds = thresholds_in;
     }
 
+    PlayerMove Mike::makeMove(std::shared_ptr<Table> info, const shared_ptr<Player> me) {
+      // get other player
+      // only works for 2 players
+      shared_ptr<Player> them;
+      vector<PlayerMove> theirMoves;
+      for(auto& pair : info->playerMoveMap) {
+        if( me != pair.first) { 
+          them = pair.first;
+          theirMoves = pair.second;
+          throw;
+        }
+      }
+      // If theirMoves is less than 3 long, pad the values
+      vector<PlayerMove> lastMoves;
+      const size_t s = theirMoves.size();
+      for(int i=0; i<3; i++) {
+        if(i < s)
+          lastMoves[i] = theirMoves[s - i - 1];
+        else
+          lastMoves[i] = BinnedPlayerMove::UNDEF;
+      }
+      
+        InfoSet thisInfoSet;
+        
+    }
+
 
 }
 
