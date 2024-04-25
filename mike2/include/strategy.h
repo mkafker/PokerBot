@@ -157,20 +157,6 @@ namespace Poker {
             void updateParametersImpl(std::vector<double>);
     };
 
-    struct Mike : public Strategy {
-        public:
-            using Strategy::Strategy;
-            PlayerMove makeMove(std::shared_ptr<Table> info, const shared_ptr<Player>) override;
-            struct InfoSet {
-                std::vector<PlayerMove> enemyMoveHistory = std::vector<PlayerMove>(3);
-                std::tuple<float, float> handStrength;
-            };
-            std::map<InfoSet, std::vector<float>> policy;
-            // maps game states to move probabilities
-        private:
-            void updateParametersImpl(std::vector<double>);
-
-    };
 
 
 
