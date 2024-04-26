@@ -7,6 +7,7 @@ void pyMonteCarloGames(const uint64_t& N);
 
 
 double pyMonteCarloRounds(const uint64_t& N, std::vector<int> params);
+double pyMonteCarloRounds(const uint64_t& N, std::vector<float> params);
 double pyMCSingleHand(const std::vector<std::tuple<int,int>>& cardsA, const std::vector<std::tuple<int,int>>& commCards, const int numOtherPlayers, const uint64_t N);
 
 int pyShowdownHands(std::vector<std::tuple<int,int>> tupleIntsA, std::vector<std::tuple<int,int>> tupleIntsB, 

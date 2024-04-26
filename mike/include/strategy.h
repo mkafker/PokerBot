@@ -17,13 +17,23 @@ namespace Poker {
     struct Strategy {
         public:
             virtual PlayerMove makeMove(const std::shared_ptr<Table>, const shared_ptr<Player>);
+            virtual void callback() {};
+            virtual void updateParameters(std::vector<float>)  {};
+            /*
             template<typename... Args>
                 void updateParameters(Args&&... args) {
                     updateParametersImpl(std::forward<Args>(args)...);
                 }
-        private:
+            
+            template<typename... Args>
+                void callback(Args&&... args) {
+                    callbackImpl(std::forward<Args>(args)...);
+                }
             template<typename... Args>
                 void updateParametersImpl(Args...) {};
+            template<typename... Args>
+                void callbackImpl(Args...) {};
+                */
     };
     struct RandomAI : public Strategy {
         public:
@@ -152,9 +162,8 @@ namespace Poker {
         public:
             using Strategy::Strategy;
             PlayerMove makeMove(std::shared_ptr<Table> info, const shared_ptr<Player>) override;
-            std::vector<double> thresholds = {0.2, 0.7, 0.9};
-      private:
-            void updateParametersImpl(std::vector<double>);
+            std::vector<float> thresholds = {0.2, 0.7, 0.9};
+            void updateParameters(std::vector<float>) override;
     };
 
     struct Mike : public Strategy {
@@ -162,14 +171,18 @@ namespace Poker {
             using Strategy::Strategy;
             PlayerMove makeMove(std::shared_ptr<Table> info, const shared_ptr<Player>) override;
             struct InfoSet {
-                std::vector<PlayerMove> enemyMoveHistory = std::vector<PlayerMove>(3);
+                std::vector<Move> enemyMoveHistory;
                 std::tuple<float, float> handStrength;
             };
-            std::map<InfoSet, std::vector<float>> policy;
-            // maps game states to move probabilities
-        private:
-            void updateParametersImpl(std::vector<double>);
-
+            float enyHandStrengthEstimate = -1.0;
+            void updateParameters(std::vector<float>) override;
+            InfoSet packTableIntoInfoSet(const std::shared_ptr<Table> info, const shared_ptr<Player> me);
+            std::vector<float> addStrengths = {-0.05, 0.2, 0.5}; // call, raise, allin
+            std::vector<float> thresholds = {-0.15, 0.15, 0.25}; // F/C, C/R, R/A
+            void callback() override {
+                std::cout << "addStrs: " << addStrengths[0] << " " << addStrengths[1] << " " << addStrengths[2] << std::endl;
+                std::cout << "thres: " << thresholds[0] << " " << thresholds[1] << " " << thresholds[2] << std::endl;
+            }
     };
 
 

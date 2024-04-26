@@ -330,34 +330,98 @@ namespace Poker {
 
     }
 
-    void MattAI::updateParametersImpl(std::vector<double> thresholds_in) {
+    void MattAI::updateParameters(std::vector<float> thresholds_in) {
         thresholds = thresholds_in;
     }
 
-    PlayerMove Mike::makeMove(std::shared_ptr<Table> info, const shared_ptr<Player> me) {
-      // get other player
-      // only works for 2 players
-      shared_ptr<Player> them;
-      vector<PlayerMove> theirMoves;
-      for(auto& pair : info->playerMoveMap) {
-        if( me != pair.first) { 
-          them = pair.first;
-          theirMoves = pair.second;
-          throw;
-        }
+    Mike::InfoSet Mike::packTableIntoInfoSet(const std::shared_ptr<Table> info, std::shared_ptr<Player> me) {
+        InfoSet IS;
+        // I am player 0
+        shared_ptr<Player> enemy = info->getPlayerByID(1);
+        vector<PlayerMove> enyMoves = info->playerMoveMap[enemy];
+        vector<Move> binnedEnyMoves;
+        for(const auto& v : enyMoves)
+          binnedEnyMoves.emplace_back(v.move);
+        IS.enemyMoveHistory = binnedEnyMoves;
+        IS.handStrength = monteCarloSingleHand(me->hand, info->communityCards, 2, 100);
+        return IS;
+    }
+
+    PlayerMove Mike::makeMove(std::shared_ptr<Table> info, const shared_ptr<Player> p) {
+      auto thisIS = packTableIntoInfoSet(info, p);
+      PlayerMove myMove;
+      constexpr float enyHandStrengthDefault = 0.52;
+
+      if( enyHandStrengthEstimate < 0.0f) enyHandStrengthEstimate = enyHandStrengthDefault;
+
+      //float addStrengthCall = -0.05;
+      //float addStrengthRaise = 0.3;
+      //float addStrengthAllIn = 0.5;
+      float addStrengthCall = addStrengths[0];
+      float addStrengthRaise = addStrengths[1];
+      float addStrengthAllIn = addStrengths[2];
+      auto updateHS = [&] (float addStrength ) -> void {
+        enyHandStrengthEstimate = clamp(enyHandStrengthEstimate+addStrength, 0.0f, 1.0f);
+      };
+      Move enyLastMove;
+      if( !thisIS.enemyMoveHistory.empty() ) {
+        enyLastMove = thisIS.enemyMoveHistory.back();
+        if( enyLastMove == Move::MOVE_CALL)
+          updateHS(addStrengthCall);
+        else if( enyLastMove == Move::MOVE_FOLD)
+          myMove.move = Move::MOVE_CALL;
+        else if( enyLastMove == Move::MOVE_RAISE)
+          updateHS(addStrengthRaise);
+        else if( enyLastMove == Move::MOVE_ALLIN)
+          updateHS(addStrengthAllIn);
+
       }
-      // If theirMoves is less than 3 long, pad the values
-      vector<PlayerMove> lastMoves;
-      const size_t s = theirMoves.size();
-      for(int i=0; i<3; i++) {
-        if(i < s)
-          lastMoves[i] = theirMoves[s - i - 1];
-        else
-          lastMoves[i] = BinnedPlayerMove::UNDEF;
-      }
-      
-        InfoSet thisInfoSet;
-        
+
+      float advantageEstimate = std::get<0>(thisIS.handStrength) - enyHandStrengthEstimate;
+
+      //float foldCallThres = -0.15;
+      //float callRaiseThres = 0.15;
+      //float raiseAllInThres = 0.25;
+      float foldCallThres = thresholds[0];
+      float callRaiseThres = thresholds[1];
+      float raiseAllInThres = thresholds[2];
+      if( advantageEstimate < foldCallThres )
+        myMove.move = Move::MOVE_FOLD;
+      else if( advantageEstimate < callRaiseThres )
+        myMove.move = Move::MOVE_CALL;
+      else if( advantageEstimate < raiseAllInThres )
+        myMove.move = Move::MOVE_RAISE;
+      else
+        myMove.move = Move::MOVE_ALLIN;
+
+      if( myMove.move == Move::MOVE_FOLD) myMove.bet_amount = 0;
+      else if( myMove.move == Move::MOVE_CALL) myMove.bet_amount = info->minimumBet;
+      else if( myMove.move == Move::MOVE_RAISE) myMove.bet_amount = info->minimumBet * 2;
+      else if( myMove.move == Move::MOVE_ALLIN) myMove.bet_amount = p->bankroll;
+      myMove.bet_amount = clamp(myMove.bet_amount, 0, p->bankroll);
+      if( myMove.bet_amount == p->bankroll) myMove.move = Move::MOVE_ALLIN;
+
+      return myMove;
+
+    }
+    void Mike::updateParameters(std::vector<float> in) {
+        // Strengths
+        auto strengthsIn = std::vector<float>(in.begin(), in.begin()+3);
+        for(auto& s : strengthsIn)
+          s = tanh(s); // put in range (-1,1)
+        std::sort(strengthsIn.begin(), strengthsIn.end());
+        this->addStrengths = strengthsIn;
+
+        // Thresholds
+        auto thresholdsIn = std::vector<float>(in.begin()+3, in.begin()+6);
+        for(auto& s : thresholdsIn)
+          s = 0.5*(1.0+tanh(s)); // put in range (0,1)
+        std::sort(thresholdsIn.begin(), thresholdsIn.end());
+        // normalize it
+        float tot = std::accumulate(thresholdsIn.begin(), thresholdsIn.end(), 0.0f);
+        for(auto& s : thresholdsIn)
+          s /= tot;
+        this->thresholds   = thresholdsIn;
     }
 
 

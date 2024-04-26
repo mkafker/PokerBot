@@ -33,28 +33,67 @@ int main() {
     }
     */
 
-    auto params = std::multimap<std::string, std::vector<std::any>>();
-    //params.emplace("CFRAI1", std::vector<std::any>{});
-    params.emplace("Matt", std::vector<std::any> {0.44, 0.46, 0.54});
-    params.emplace("call", std::vector<std::any>{});
-    //params.emplace("call", std::vector<std::any>{});
+    auto aiInfo = std::multimap<std::string, std::vector<float>>();
+    //aiInfo.emplace("CFRAI1", std::vector<float>{});
+    //aiInfo.emplace("Matt", std::vector<float> {0.44, 0.46, 0.54});
+    aiInfo.emplace("Mike", std::vector<float> 
+{-1.0964357164653398, 0.6858257039331285, -0.6811199899767748, -0.9463686817487581, -0.17352864790969913, -1.0813763189426324});
+    aiInfo.emplace("call", std::vector<float>{});
+    //aiInfo.emplace("call", std::vector<float>{});
+    // Create Table and fill AI List
+    auto myTable = Table();
+    // unpack AI list
+    std::vector<string> aiStrings;
+    std::vector<std::vector<float>> aiParams;
+    for(auto& pair : aiInfo) {
+      aiStrings.emplace_back(std::get<0>(pair));
+      aiParams.emplace_back(std::get<1>(pair));
+    }
+    
+    myTable.setPlayerList(aiStrings);
+    for( int i=0; i<aiStrings.size(); i++ ) {
+      // Table is filled according to same order as aiStrings
+      auto p = myTable.getPlayerByID(i);
+      p->strategy->updateParameters(aiParams[i]);
+    }
+    std::random_device rd;
+    // set blind amounts
+    myTable.bigBlind = 10;
+    myTable.smallBlind = 5;
+
+    auto game = std::make_shared<Game>(myTable);
+
+    const int N = 10000;
+    // setup some statistics
+    vector<int> pZeroWinnings (N);
 
     auto start = std::chrono::steady_clock::now();
-    constexpr int N = 5000;
-    auto [avgr, stddevr] = monteCarloGames(N, params);
-    std::cout << avgr << " (" << stddevr << ")" << std::endl;
+    int iT = 0;
+    int totalRounds = 0;
+    const int startingCash = 100;
+    for(int iN = 0; iN < N; iN++) {
+        game->table.setPlayerBankrolls(startingCash);
+        game->setup();
+        auto pZero = game->table.getPlayerByID(0);
+        game->doRound();
+        pZero->strategy->callback();
+        pZeroWinnings[iN] = (game->table.getPlayerByID(0)->bankroll - startingCash)/myTable.bigBlind; // dimensionless winnings
+    }
 
     std::chrono::duration<double> duration = std::chrono::steady_clock::now() - start;
-    std::cout << N << " rounds calculated in " << duration.count() << " seconds, or " 
-    << double(N)/duration.count() << " rounds/s" << std::endl;
+    //std::cout << N << " games (" << totalRounds << " rounds) calculated in " << duration.count() << " seconds, or " 
+    //<< double(N)/duration.count() << " games/s (" << double(totalRounds)/duration.count() << " rounds/s)" << std::endl;
 
-    //auto [avgg, stddevg] = monteCarloGames(1000, params);
-    //std::cout << avgg << " (" << stddevg << ")" << std::endl;
-    //benchmarkHandRankCalculator(1000000);
+    std::cout << double(N)/duration.count() << "/s" << std::endl;
+    float avg = std::accumulate(pZeroWinnings.begin(), pZeroWinnings.end(), 0.0f);
+    avg /= N;
+    std::cout << avg << std::endl;
+
 
 
     // Calculates pre-flop ranges
     /*
+    vector<float> avgs;
     vector<Suit> suitlist = { Suit::HEART, Suit::CLUB, Suit::DIAMOND, Suit::SPADE};
     for(int j=0; j<13; j++) 
         std::cout << std::setw(10) << static_cast<Rank>(j) << " ";
@@ -62,18 +101,32 @@ int main() {
     for(int i=0; i<13; i++) {
         std::cout << static_cast<Rank>(i) << " ";
         for(int j=0; j<13; j++) {
-            Card c1(static_cast<Rank>(i), Suit::HEART);
-            Card c2(static_cast<Rank>(j), Suit::HEART);
-            std::vector<Card> myCards = { c1, c2 };
-            auto [WR, var] = monteCarloSingleHandStdDev(myCards, 5, 1, 5000);
+            float miniavg = 0.0;
+            for(auto& suit1 : suitlist) {
+              for(auto &suit2 : suitlist) {
+                Card c1(static_cast<Rank>(i), suit1);
+                Card c2(static_cast<Rank>(j), suit2);
+                std::vector<Card> myCards = { c1, c2 };
+                auto [avg, sigma] = monteCarloSingleHand(myCards, 5, 1, 500);
+                miniavg += avg;
+                avgs.push_back(avg);
+              }
+            }
+            miniavg /= 16.0f;
             std::cout << std::fixed;
             std::cout << std::setprecision(2) << std::setw(10);
-            std::cout << WR << " (" << var << ")";
+            //std::cout << avg << " (" << sigma << ")";
+            std::cout << miniavg;
         }
         std::cout << std::endl;
     }
+    float median;
+    std::sort(avgs.begin(), avgs.end());
+    median = avgs[avgs.size()/2];
+    float bigavg = std::accumulate(avgs.begin(), avgs.end(), 0.0f);
+    bigavg /= avgs.size();
+    std::cout << "AVERAGE WINRATE: " << bigavg << std::endl;
+    std::cout << "MEDIAN WINRATE: " << median << std::endl;
     */
-
-
     return 0;
 }

@@ -165,15 +165,15 @@ double pyMCSingleHand(const std::vector<std::tuple<int,int>>& cardsA, const std:
   return avg;
 }
 
-double pyMonteCarloRounds(const uint64_t& N, std::vector<double> mattParams) {
-    auto AIList = std::multimap<std::string, std::vector<std::any>>();
-    std::vector<std::any> mattParamsAny;
-    for( const auto& v : mattParams)
-      mattParamsAny.emplace_back(v);
-    AIList.emplace("Matt", mattParamsAny);
-    AIList.emplace("call", std::vector<std::any>{});
-    //params.emplace("call", std::vector<std::any>{});
-    //params.emplace("random", std::vector<std::any>{});
+double pyMonteCarloRounds(const uint64_t& N, std::vector<float> mikeParams) {
+    auto AIList = std::multimap<std::string, std::vector<float>>();
+    std::vector<float> mikeParamsAny;
+    for( const auto& v : mikeParams)
+      mikeParamsAny.emplace_back(v);
+    AIList.emplace("Mike", mikeParamsAny);
+    AIList.emplace("call", std::vector<float>{});
+    //params.emplace("call", std::vector<float>{});
+    //params.emplace("random", std::vector<float>{});
     auto [avg, stddev] = monteCarloRounds(N, AIList);
     return avg;
 }
@@ -190,8 +190,8 @@ double pyMonteCarloRounds(const uint64_t& N, std::vector<double> mattParams) {
           pybind11::arg("cardsA"), pybind11::arg("cardsB"), pybind11::arg("commCards"));
       m.def("MCSingleHand", &pyMCSingleHand, "monte carlo single hand",
           pybind11::arg("cards"), pybind11::arg("commCards"), pybind11::arg("numOtherPlayers"), pybind11::arg("N"));
-      m.def("MCMattRounds", &pyMonteCarloRounds, "monte carlo rounds (matt)",
-          pybind11::arg("N"), pybind11::arg("mattParams"));
+      m.def("MCMikeRounds", &pyMonteCarloRounds, "monte carlo rounds (mike)",
+          pybind11::arg("N"), pybind11::arg("mikeParams"));
   }
 
 #endif

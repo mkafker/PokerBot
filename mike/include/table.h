@@ -2,6 +2,7 @@
 #include <list>
 #include <memory>
 #include <algorithm>
+#include <map>
 
 #include "card.h"
 #include "strategy.h"
@@ -10,6 +11,7 @@ using namespace std;
 namespace Poker {
 
     class Player;
+    struct PlayerMove;
     enum class PlayerPosition;
     class Table {
         private:
@@ -26,6 +28,8 @@ namespace Poker {
             int                 smallBlind          = 5;
             int                 pot                 = 0;
             int                 minimumBet          = 0;
+            bool skipTurn = false;
+            map<shared_ptr<Player>, vector<PlayerMove>> playerMoveMap;
             shared_ptr<Deck>   getDeck();
             void setPlayerList(const vector<string> sVec);
             void resetCards(random_device& );

@@ -35,13 +35,13 @@ namespace Poker {
   }
 
   void benchmarkRounds(uint64_t N) {
-    auto params = std::multimap<std::string, std::vector<std::any>>();
-    params.emplace("call", std::vector<std::any>{});
-    params.emplace("call", std::vector<std::any>{});
-    params.emplace("call", std::vector<std::any>{});
-    params.emplace("random", std::vector<std::any>{});
-    params.emplace("random", std::vector<std::any>{});
-    params.emplace("random", std::vector<std::any>{});
+    auto params = std::multimap<std::string, std::vector<float>>();
+    params.emplace("call", std::vector<float>{});
+    params.emplace("call", std::vector<float>{});
+    params.emplace("call", std::vector<float>{});
+    params.emplace("random", std::vector<float>{});
+    params.emplace("random", std::vector<float>{});
+    params.emplace("random", std::vector<float>{});
     auto start = std::chrono::steady_clock::now();
     monteCarloRounds(N, params);
     std::chrono::duration<double> duration = std::chrono::steady_clock::now() - start;
@@ -79,13 +79,13 @@ void monteCarloGameStateCompare() {
     game->doRound();
 }
 
-std::tuple<double, double> monteCarloRounds(const uint64_t& N, const std::multimap<std::string, std::vector<std::any>>& aiInfo) {
+std::tuple<double, double> monteCarloRounds(const uint64_t& N, const std::multimap<std::string, std::vector<float>>& aiInfo) {
     // input: N games, vector of tuples ( Ai type string, ai parameters )
     // Returns (avg win rate, variance of win rate) of player 0
     // Create Table and fill AI List
     auto myTable = Table();
     std::vector<string> aiStrings;
-    std::vector<std::vector<std::any>> aiParams;
+    std::vector<std::vector<float>> aiParams;
     for(auto& pair : aiInfo) {
       aiStrings.emplace_back(std::get<0>(pair));
       aiParams.emplace_back(std::get<1>(pair));
@@ -135,12 +135,12 @@ std::tuple<double, double> monteCarloRounds(const uint64_t& N, const std::multim
 }
 
 
-std::tuple<double, double> monteCarloGames(const uint64_t& N, const std::multimap<std::string, std::vector<std::any>>& aiInfo) {
+std::tuple<double, double> monteCarloGames(const uint64_t& N, const std::multimap<std::string, std::vector<float>>& aiInfo) {
     // Create Table and fill AI List
     auto myTable = Table();
     // unpack AI list
     std::vector<string> aiStrings;
-    std::vector<std::vector<std::any>> aiParams;
+    std::vector<std::vector<float>> aiParams;
     for(auto& pair : aiInfo) {
       aiStrings.emplace_back(std::get<0>(pair));
       aiParams.emplace_back(std::get<1>(pair));

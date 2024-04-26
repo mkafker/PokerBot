@@ -193,41 +193,46 @@ namespace Poker {
                         while (i != bettingPlayers.end()) {
                             shared_ptr<Player> P = *i;
                             PlayerMove Pmove =  P->makeMove(make_shared<Table>(table));
-                            const bool allIn = Pmove.move == Move::MOVE_ALLIN;
-                            const bool folded = Pmove.move == Move::MOVE_FOLD;
-                            
-                            // Set the new minimum bet if player raised
-                            table.minimumBet = max(Pmove.bet_amount, table.minimumBet);
+                            if ( !table.skipTurn ) {
+                                table.playerMoveMap[P].emplace_back(Pmove);
+                                const bool allIn = Pmove.move == Move::MOVE_ALLIN;
+                                const bool folded = Pmove.move == Move::MOVE_FOLD;
+                                
+                                // Set the new minimum bet if player raised
+                                table.minimumBet = max(Pmove.bet_amount, table.minimumBet);
 
-                            if( printMovesToRecord ) moveRecord[P].emplace_back(Pmove);
-                            if( printMovesToRecord ) tableRecord.emplace_back(table);
-                            
-                            if( folded ) {
-                                //take their money now
-                                P->bankroll -= transferAmount[P];
-                                transferAmount[P] = 0;
-                                foldedPlayers.emplace_back(P);
-                                i = bettingPlayers.erase(i);
-                            }
-                            else {
-                                // bet_amount should be equal or greater than transferAmount[P]
-                                table.pot += Pmove.bet_amount - transferAmount[P];
-                                transferAmount[P] = Pmove.bet_amount;
-                                if( allIn ) {
-                                    allInPlayers.emplace_back(P);
+                                if( printMovesToRecord ) moveRecord[P].emplace_back(Pmove);
+                                if( printMovesToRecord ) tableRecord.emplace_back(table);
+                                
+                                if( folded ) {
+                                    //take their money now
+                                    P->bankroll -= transferAmount[P];
+                                    transferAmount[P] = 0;
+                                    foldedPlayers.emplace_back(P);
                                     i = bettingPlayers.erase(i);
                                 }
                                 else {
-                                    i++;
+                                    // bet_amount should be equal or greater than transferAmount[P]
+                                    table.pot += Pmove.bet_amount - transferAmount[P];
+                                    transferAmount[P] = Pmove.bet_amount;
+                                    if( allIn ) {
+                                        allInPlayers.emplace_back(P);
+                                        i = bettingPlayers.erase(i);
+                                    }
+                                    else {
+                                        i++;
+                                    }
                                 }
+                                // Do another round the table only if somebody raised
+                                if( minimumBetBeforeRound != table.minimumBet ) { keepgoing = true; }
+                                #if PRINT
+                                printPlayerMove(*P, Pmove);
+                                std::cout << "Minimum bet: " << table.minimumBet << std::endl;
+                                std::cout << "Current pot: " << table.pot << std::endl;
+                                #endif
+                            } else {
+                                table.skipTurn = false;
                             }
-                            // Do another round the table only if somebody raised
-                            if( minimumBetBeforeRound != table.minimumBet ) { keepgoing = true; }
-                            #if PRINT
-                            printPlayerMove(*P, Pmove);
-                            std::cout << "Minimum bet: " << table.minimumBet << std::endl;
-                            std::cout << "Current pot: " << table.pot << std::endl;
-                            #endif
                         }
                     }
                     // advance game
