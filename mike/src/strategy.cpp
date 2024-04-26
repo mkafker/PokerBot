@@ -424,6 +424,78 @@ namespace Poker {
         this->thresholds   = thresholdsIn;
     }
 
+    KillBot::InfoSet KillBot::packTableIntoInfoSet(std::shared_ptr<Table> info, const shared_ptr<Player> me) {
+      InfoSet is;
+      is.handStrength = get<0>(monteCarloSingleHand(me->hand, info->communityCards, 2, 100));
+      return is;
+    }
 
+    PlayerMove KillBot::makeMove(std::shared_ptr<Table> info, const shared_ptr<Player> me) {
+      if( info->street == 0) {
+        InfoSetsToUpdate.clear();
+        endRoundUtility = 0.0f;
+        startingCash = me->bankroll;
+      }
+      auto newInfoSet = packTableIntoInfoSet(info, me);
+      map<Move, float> probDist;
+      auto [updatedIter, ISWasNew] = policy.try_emplace(newInfoSet);
+      // ISWasNew is TRUE is the RGS key didn't exist in the CFR table
+      // updatedIter is an iterator to the key corresponding to the game state whether or not the insertion took place
+      auto normalizeMap = [] (map<Move, float>& in) {
+        float t = 0.0;
+        for(auto& pair : in) 
+          t += pair.second;
+        for(auto& pair : in) 
+          pair.second /= t;
+      };
+      if( ISWasNew ) {
+        // make a random move if we don't have a policy
+        probDist[Move::MOVE_FOLD]  = 1.0;
+        probDist[Move::MOVE_CALL]  = 1.0;
+        probDist[Move::MOVE_RAISE] = 1.0;
+        normalizeMap(probDist);
+        policy[newInfoSet] = probDist;
+      }
+      else {
+        // policy is already in there
+        probDist = policy[newInfoSet];
+      }
+
+      // Sample the choices according to the prob dist
+      std::uniform_real_distribution<float> dist(0.0f, 1.0f);
+      std::random_device rd;
+      std::mt19937 rng(rd());
+      float choice = dist(rng);
+      float partialSum = 0.0f;
+      Move myMove;
+      for( auto& pair : probDist ) {
+        partialSum += pair.second;
+        if(partialSum >= choice) {
+          myMove = pair.first;
+          break;
+        } 
+      }
+      // Add the move and infoset to the update list
+      InfoSetsToUpdate[newInfoSet] = myMove;
+
+      // calculate bet amount and GO GO GO
+      PlayerMove myPMove;
+      if( myMove == Move::MOVE_FOLD) myPMove.bet_amount = 0;
+      else if( myMove == Move::MOVE_CALL) myPMove.bet_amount = info->minimumBet;
+      else if( myMove == Move::MOVE_RAISE) myPMove.bet_amount = info->minimumBet * 2;
+      else if( myMove == Move::MOVE_ALLIN) myPMove.bet_amount = p->bankroll;
+      myPMove.bet_amount = clamp(myPMove.bet_amount, 0, p->bankroll);
+      if( myPMove.bet_amount == p->bankroll) myMove = Move::MOVE_ALLIN;
+      myPMove.move = myMove;
+
+      return myPMove;
+    }
+
+    void KillBot::callback(const shared_ptr<Player> me) {
+        endRoundUtility = me->bankroll - startingCash;
+        if( endRoundUtility < 0) {
+
+        }
+    }
 }
 

@@ -17,7 +17,7 @@ namespace Poker {
     struct Strategy {
         public:
             virtual PlayerMove makeMove(const std::shared_ptr<Table>, const shared_ptr<Player>);
-            virtual void callback() {};
+            virtual void callback( ... ) {};
             virtual void updateParameters(std::vector<float>)  {};
             /*
             template<typename... Args>
@@ -123,6 +123,11 @@ namespace Poker {
                         playerHistory == other.playerHistory;
             }
         };
+    template <typename T>
+    static void hashCombine(size_t& seed, const T& v) {
+        hash<T> hasher;
+        seed ^= hasher(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+    }
         // Need the hash for the unordered_map
         struct RGSHash {
             size_t operator()(const ReducedGameState& rgs) const {
@@ -150,13 +155,13 @@ namespace Poker {
         void dumpCFRTableToFile(std::string outfile);
         void loadCFRTableFromFile(std::string infile);
 
-        template <typename T>
-        static void hashCombine(size_t& seed, const T& v) {
-            hash<T> hasher;
-            seed ^= hasher(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-        }
     };
 
+    template <typename T>
+    static void hashCombine(size_t& seed, const T& v) {
+        hash<T> hasher;
+        seed ^= hasher(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+    }
 
     struct MattAI : public Strategy {
         public:
@@ -179,10 +184,39 @@ namespace Poker {
             InfoSet packTableIntoInfoSet(const std::shared_ptr<Table> info, const shared_ptr<Player> me);
             std::vector<float> addStrengths = {-0.05, 0.2, 0.5}; // call, raise, allin
             std::vector<float> thresholds = {-0.15, 0.15, 0.25}; // F/C, C/R, R/A
-            void callback() override {
+            void callback() {
                 std::cout << "addStrs: " << addStrengths[0] << " " << addStrengths[1] << " " << addStrengths[2] << std::endl;
                 std::cout << "thres: " << thresholds[0] << " " << thresholds[1] << " " << thresholds[2] << std::endl;
             }
+    };
+
+
+    struct KillBot : public Strategy {
+        public:
+            using Strategy::Strategy;
+            PlayerMove makeMove(std::shared_ptr<Table> info, const shared_ptr<Player>) override;
+            struct InfoSet {
+                //std::vector<Move> enemyMoveHistory;
+                int handStrength;
+                bool operator==(const InfoSet& other) const {
+                    return handStrength == other.handStrength;
+                }
+            };
+            struct ISHash {
+                size_t operator()(const InfoSet& is) const {
+                    size_t hash = 0;
+                    hashCombine(hash, is.handStrength);
+                    return hash;
+                }
+            };
+
+            //void updateParameters(std::vector<float>) override;
+            InfoSet packTableIntoInfoSet(const std::shared_ptr<Table> info, const shared_ptr<Player> me);
+            unordered_map<InfoSet, map<Move, float>, ISHash> policy;
+            float endRoundUtility = 0.0;
+            int startingCash = 0;
+            map<InfoSet, Move> InfoSetsToUpdate;
+            void callback(const shared_ptr<Player>);
     };
 
 
