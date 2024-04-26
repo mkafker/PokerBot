@@ -17,7 +17,7 @@ namespace Poker {
     struct Strategy {
         public:
             virtual PlayerMove makeMove(const std::shared_ptr<Table>, const shared_ptr<Player>);
-            virtual void callback( ... ) {};
+            virtual void callback( const std::shared_ptr<Table>, const shared_ptr<Player>) {};
             virtual void updateParameters(std::vector<float>)  {};
             /*
             template<typename... Args>
@@ -215,8 +215,16 @@ namespace Poker {
             unordered_map<InfoSet, map<Move, float>, ISHash> policy;
             float endRoundUtility = 0.0;
             int startingCash = 0;
-            map<InfoSet, Move> InfoSetsToUpdate;
-            void callback(const shared_ptr<Player>);
+            unordered_map<InfoSet, Move, ISHash> InfoSetsToUpdate;
+            void callback(const std::shared_ptr<Table> info, const shared_ptr<Player> me) override;
+
+            void normalizeMap(map<Move, float>& in) {
+                float t = 0.0;
+                for(auto& pair : in) 
+                t += pair.second;
+                for(auto& pair : in) 
+                pair.second /= t;
+            };
     };
 
 

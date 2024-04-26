@@ -36,8 +36,9 @@ int main() {
     auto aiInfo = std::multimap<std::string, std::vector<float>>();
     //aiInfo.emplace("CFRAI1", std::vector<float>{});
     //aiInfo.emplace("Matt", std::vector<float> {0.44, 0.46, 0.54});
-    aiInfo.emplace("Mike", std::vector<float> 
-{-1.0964357164653398, 0.6858257039331285, -0.6811199899767748, -0.9463686817487581, -0.17352864790969913, -1.0813763189426324});
+    //aiInfo.emplace("Mike", std::vector<float> 
+//{-1.0964357164653398, 0.6858257039331285, -0.6811199899767748, -0.9463686817487581, -0.17352864790969913, -1.0813763189426324});
+    aiInfo.emplace("KillBot", std::vector<float>{});
     aiInfo.emplace("call", std::vector<float>{});
     //aiInfo.emplace("call", std::vector<float>{});
     // Create Table and fill AI List
@@ -69,6 +70,7 @@ int main() {
 
     auto start = std::chrono::steady_clock::now();
     int iT = 0;
+    size_t printInterval = 500;
     int totalRounds = 0;
     const int startingCash = 100;
     for(int iN = 0; iN < N; iN++) {
@@ -76,8 +78,16 @@ int main() {
         game->setup();
         auto pZero = game->table.getPlayerByID(0);
         game->doRound();
-        pZero->strategy->callback();
+        pZero->strategy->callback(make_shared<Table>(game->table), pZero);
         pZeroWinnings[iN] = (game->table.getPlayerByID(0)->bankroll - startingCash)/myTable.bigBlind; // dimensionless winnings
+        if( iT == printInterval ) {
+          float avg = std::accumulate(pZeroWinnings.begin()+iN-1-printInterval, pZeroWinnings.begin()+iN-1, 0.0f);
+          avg /= printInterval;
+          std::cout << "pZero winnings: " << avg << std::endl;
+          iT = 0;
+        }
+        iT++;
+        //std::cout << "pZero winnings: " << pZeroWinnings[iN] << std::endl;
     }
 
     std::chrono::duration<double> duration = std::chrono::steady_clock::now() - start;

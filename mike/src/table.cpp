@@ -38,6 +38,8 @@ namespace Poker {
                     guy->strategy = make_shared<MattAI>();
             else if (s == "Mike")
                     guy->strategy = make_shared<Mike>();
+            else if (s == "KillBot")
+                    guy->strategy = make_shared<KillBot>();
             else    throw;
             guy->setPosition(playerPositionList[n]);
             guy->playerID = n;

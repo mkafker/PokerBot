@@ -426,7 +426,8 @@ namespace Poker {
 
     KillBot::InfoSet KillBot::packTableIntoInfoSet(std::shared_ptr<Table> info, const shared_ptr<Player> me) {
       InfoSet is;
-      is.handStrength = get<0>(monteCarloSingleHand(me->hand, info->communityCards, 2, 100));
+      float probWin = get<0>(monteCarloSingleHand(me->hand, info->communityCards, 1, 100));
+      is.handStrength = int( probWin * 3.0);
       return is;
     }
 
@@ -441,13 +442,6 @@ namespace Poker {
       auto [updatedIter, ISWasNew] = policy.try_emplace(newInfoSet);
       // ISWasNew is TRUE is the RGS key didn't exist in the CFR table
       // updatedIter is an iterator to the key corresponding to the game state whether or not the insertion took place
-      auto normalizeMap = [] (map<Move, float>& in) {
-        float t = 0.0;
-        for(auto& pair : in) 
-          t += pair.second;
-        for(auto& pair : in) 
-          pair.second /= t;
-      };
       if( ISWasNew ) {
         // make a random move if we don't have a policy
         probDist[Move::MOVE_FOLD]  = 1.0;
@@ -483,18 +477,29 @@ namespace Poker {
       if( myMove == Move::MOVE_FOLD) myPMove.bet_amount = 0;
       else if( myMove == Move::MOVE_CALL) myPMove.bet_amount = info->minimumBet;
       else if( myMove == Move::MOVE_RAISE) myPMove.bet_amount = info->minimumBet * 2;
-      else if( myMove == Move::MOVE_ALLIN) myPMove.bet_amount = p->bankroll;
-      myPMove.bet_amount = clamp(myPMove.bet_amount, 0, p->bankroll);
-      if( myPMove.bet_amount == p->bankroll) myMove = Move::MOVE_ALLIN;
+      else if( myMove == Move::MOVE_ALLIN) myPMove.bet_amount = me->bankroll;
+      myPMove.bet_amount = clamp(myPMove.bet_amount, 0, me->bankroll);
+      if( myPMove.bet_amount == me->bankroll) myMove = Move::MOVE_ALLIN;
       myPMove.move = myMove;
 
       return myPMove;
     }
 
-    void KillBot::callback(const shared_ptr<Player> me) {
+    void KillBot::callback(const shared_ptr<Table> info, const shared_ptr<Player> me) {
         endRoundUtility = me->bankroll - startingCash;
-        if( endRoundUtility < 0) {
-
+        float updateFac = 2.0;      // Halve bad choices
+        for(auto& pair : InfoSetsToUpdate) {
+          auto MoveMap = policy[pair.first];
+          if( endRoundUtility < 0){    // Punish bad choices
+            MoveMap[pair.second] /= updateFac;
+            MoveMap[pair.second] = clamp(MoveMap[pair.second], 0.05f, 0.95f);
+          }
+          else if( endRoundUtility > 0) { // Reward good ones
+            MoveMap[pair.second] *= updateFac;
+            MoveMap[pair.second] = clamp(MoveMap[pair.second], 0.05f, 0.95f);
+          }
+          normalizeMap(MoveMap);  
+          policy[pair.first] = MoveMap;
         }
     }
 }
