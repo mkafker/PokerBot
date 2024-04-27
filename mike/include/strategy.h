@@ -198,26 +198,38 @@ namespace Poker {
             struct InfoSet {
                 //std::vector<Move> enemyMoveHistory;
                 int handStrength;
+                Move enyMove;
                 bool operator==(const InfoSet& other) const {
-                    return handStrength == other.handStrength;
+                    return handStrength == other.handStrength && enyMove == other.enyMove;
                 }
             };
             struct ISHash {
                 size_t operator()(const InfoSet& is) const {
                     size_t hash = 0;
                     hashCombine(hash, is.handStrength);
+                    hashCombine(hash, static_cast<int>(is.enyMove));
                     return hash;
                 }
             };
+            struct ModelParameters {
+                float decayRate = -0.001;
+                float utilityScale = 0.05;
+            };
+            // for call bot: decay -0.001, utilityScale 0.02
 
             //void updateParameters(std::vector<float>) override;
             InfoSet packTableIntoInfoSet(const std::shared_ptr<Table> info, const shared_ptr<Player> me);
             unordered_map<InfoSet, map<Move, float>, ISHash> policy;
+            unordered_map<InfoSet, size_t, ISHash> hitCount;
+            size_t numRounds = 0;
+            size_t numWins   = 0;
             float endRoundUtility = 0.0;
             int startingCash = 0;
+            float handEstimateUncertainty = 0.0f; // used in backprop
             unordered_map<InfoSet, Move, ISHash> InfoSetsToUpdate;
+            ModelParameters params;
             void callback(const std::shared_ptr<Table> info, const shared_ptr<Player> me) override;
-
+            void updateParameters(std::vector<float>) override;
             void normalizeMap(map<Move, float>& in) {
                 float t = 0.0;
                 for(auto& pair : in) 
@@ -225,6 +237,13 @@ namespace Poker {
                 for(auto& pair : in) 
                 pair.second /= t;
             };
+            void reset() {
+                numRounds = 0;
+                numWins = 0;
+                policy.clear();
+                hitCount.clear();
+                endRoundUtility = 0.0;
+            }
     };
 
 

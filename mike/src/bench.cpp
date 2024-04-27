@@ -114,7 +114,7 @@ std::tuple<double, double> monteCarloRounds(const uint64_t& N, const std::multim
       game->table.setPlayerBankrolls(startingCash);
       game->setup();
       game->table.resetCards(rd);
-      game->doRound();  
+      game->doRound();
       iN++;
       pZeroWinnings[iN] = (game->table.getPlayerByID(0)->bankroll - startingCash)/myTable.bigBlind; // dimensionless winnings
     }

@@ -426,8 +426,13 @@ namespace Poker {
 
     KillBot::InfoSet KillBot::packTableIntoInfoSet(std::shared_ptr<Table> info, const shared_ptr<Player> me) {
       InfoSet is;
-      float probWin = get<0>(monteCarloSingleHand(me->hand, info->communityCards, 1, 100));
+      auto [avg, sigma] = monteCarloSingleHand(me->hand, info->communityCards, 1, 100);
+      float probWin = avg;
+      handEstimateUncertainty = sigma;
       is.handStrength = int( probWin * 3.0);
+      auto pOne = info->getPlayerByID(1);
+      is.enyMove = pOne->move.move;
+
       return is;
     }
 
@@ -440,6 +445,7 @@ namespace Poker {
       auto newInfoSet = packTableIntoInfoSet(info, me);
       map<Move, float> probDist;
       auto [updatedIter, ISWasNew] = policy.try_emplace(newInfoSet);
+      hitCount[newInfoSet]++;
       // ISWasNew is TRUE is the RGS key didn't exist in the CFR table
       // updatedIter is an iterator to the key corresponding to the game state whether or not the insertion took place
       if( ISWasNew ) {
@@ -482,25 +488,36 @@ namespace Poker {
       if( myPMove.bet_amount == me->bankroll) myMove = Move::MOVE_ALLIN;
       myPMove.move = myMove;
 
+      // incremement round counter and return
+      numRounds++;
       return myPMove;
     }
 
     void KillBot::callback(const shared_ptr<Table> info, const shared_ptr<Player> me) {
-        endRoundUtility = me->bankroll - startingCash;
-        float updateFac = 2.0;      // Halve bad choices
+        // Weights backpropagation
+        endRoundUtility = float(me->bankroll - startingCash) / float(info->bigBlind);
+        float utilityScale = params.utilityScale * float(endRoundUtility);
+        float decayRate = params.decayRate;
+        // downplay corrections if the uncertainty in hand estimation was high
+        //if( handEstimateUncertainty > 0.10 ) utilityScale *= 0.1;
+
         for(auto& pair : InfoSetsToUpdate) {
-          auto MoveMap = policy[pair.first];
-          if( endRoundUtility < 0){    // Punish bad choices
-            MoveMap[pair.second] /= updateFac;
-            MoveMap[pair.second] = clamp(MoveMap[pair.second], 0.05f, 0.95f);
-          }
-          else if( endRoundUtility > 0) { // Reward good ones
-            MoveMap[pair.second] *= updateFac;
-            MoveMap[pair.second] = clamp(MoveMap[pair.second], 0.05f, 0.95f);
-          }
-          normalizeMap(MoveMap);  
+          auto& MoveMap = policy[pair.first];
+          float updateFac = 1.0;
+          updateFac += utilityScale * (0.001 + exp(decayRate * float(hitCount[pair.first])));
+          MoveMap[pair.second] *= updateFac;
+          MoveMap[pair.second] = clamp(MoveMap[pair.second], 0.001f, 0.999f);
+          normalizeMap(MoveMap);
           policy[pair.first] = MoveMap;
         }
+
+        if (endRoundUtility > 0.0f) numWins++;
+    }
+
+    void KillBot::updateParameters(std::vector<float> in) {
+      if( !in.empty() ) {
+        params.decayRate = in[0];
+        params.utilityScale = in[1];
+      }
     }
 }
-

@@ -178,6 +178,93 @@ double pyMonteCarloRounds(const uint64_t& N, std::vector<float> mikeParams) {
     return avg;
 }
 
+float pyTrainKillBot(const std::vector<float> mikeParams) {
+    auto aiInfo = std::multimap<std::string, std::vector<float>>();
+    aiInfo.emplace("KillBot", mikeParams);
+    aiInfo.emplace("call", std::vector<float>{});
+    //aiInfo.emplace("call", std::vector<float>{});
+    // Create Table and fill AI List
+    auto myTable = Table();
+    // unpack AI list
+    std::vector<string> aiStrings;
+    std::vector<std::vector<float>> aiParams;
+    for(auto& pair : aiInfo) {
+      aiStrings.emplace_back(std::get<0>(pair));
+      aiParams.emplace_back(std::get<1>(pair));
+    }
+    
+    myTable.setPlayerList(aiStrings);
+    for( int i=0; i<aiStrings.size(); i++ ) {
+      // Table is filled according to same order as aiStrings
+      auto p = myTable.getPlayerByID(i);
+      p->strategy->updateParameters(aiParams[i]);
+    }
+    std::random_device rd;
+    // set blind amounts
+    myTable.bigBlind = 10;
+    myTable.smallBlind = 5;
+
+    auto game = std::make_shared<Game>(myTable);
+
+    const int N = 500;
+    const int superN = 15;
+    size_t printInterval = 1000;
+    // setup some statistics
+    vector<int> pZeroWinnings (N*superN);
+
+    auto start = std::chrono::steady_clock::now();
+    int iT = 0;
+    int totalRounds = 0;
+    const int startingCash = 100;
+
+    auto pZero = game->table.getPlayerByID(0);
+    float avgLR = 0.0f;
+    for(int jN = 0; jN < superN; jN++) {
+      auto pZeroStrat = dynamic_pointer_cast<KillBot>(pZero->strategy);
+      pZeroStrat->reset();
+      float firstSet, lastSet = 0.0f;
+      for(int iN = 0; iN < N; iN++) {
+          int bigInd = N*jN + iN;
+          game->table.setPlayerBankrolls(startingCash);
+          game->setup();
+          game->doRound();
+          pZero->strategy->callback(make_shared<Table>(game->table), pZero);
+          pZeroWinnings[bigInd] = (game->table.getPlayerByID(0)->bankroll - startingCash)/myTable.bigBlind; // dimensionless winnings
+          float avg = 0.0;
+          if( iT == printInterval) {
+            avg = std::accumulate(pZeroWinnings.begin()+bigInd-printInterval, pZeroWinnings.begin()+bigInd, 0.0f);
+            avg /= printInterval;
+            if( iT == printInterval ) {
+              //std::cout << "" << avg << std::endl;
+              iT = 0;
+            }
+            if(iN == iN)
+              firstSet += avg;
+            else 
+              lastSet = avg;
+          }
+          iT++;
+      }
+      float avg = std::accumulate(pZeroWinnings.begin()+jN*N, pZeroWinnings.begin()+(jN+1)*N, 0.0f);
+      avg /= N;
+      float tmp = (lastSet - firstSet)/N;
+      avgLR += tmp;
+    }
+    // More statistics
+    std::chrono::duration<double> duration = std::chrono::steady_clock::now() - start;
+    //std::cout << double(N*superN)/duration.count() << " rounds/s" << std::endl;
+    float avg = std::accumulate(pZeroWinnings.begin(), pZeroWinnings.end(), 0.0f);
+    avg /= (superN*N);
+    std::cout << "=================" << std::endl;
+    std::cout << "Parameters: ";
+    for(auto&p : mikeParams)
+      std::cout << p << " ";
+    std::cout << std::endl;
+    std::cout << "Average win rate       = " << avg << std::endl;
+
+    return avg;
+}
+
 
 #if PYTHON
   /*
@@ -192,6 +279,8 @@ double pyMonteCarloRounds(const uint64_t& N, std::vector<float> mikeParams) {
           pybind11::arg("cards"), pybind11::arg("commCards"), pybind11::arg("numOtherPlayers"), pybind11::arg("N"));
       m.def("MCMikeRounds", &pyMonteCarloRounds, "monte carlo rounds (mike)",
           pybind11::arg("N"), pybind11::arg("mikeParams"));
+      m.def("MCKillBotRounds", &pyTrainKillBot, "monte carlo rounds (killbot)",
+          pybind11::arg("mikeParams"));
   }
 
 #endif
