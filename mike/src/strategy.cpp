@@ -286,11 +286,11 @@ namespace Poker {
     static PlayerMove betAmountToMove(int betAmount, shared_ptr<Table>& info, const shared_ptr<Player>& p) {
       PlayerMove myMove;
       myMove.bet_amount = betAmount;
-      clamp(myMove.bet_amount, 0, p->bankroll);
+      myMove.bet_amount = clamp(myMove.bet_amount, 0, p->bankroll);
       if( myMove.bet_amount == 0 ) myMove.move = Move::MOVE_FOLD;
       else if( myMove.bet_amount == p->bankroll ) myMove.move = Move::MOVE_ALLIN;
       else {
-        clamp(myMove.bet_amount, info->minimumBet, p->bankroll);
+        myMove.bet_amount = clamp(myMove.bet_amount, info->minimumBet, p->bankroll);
         if( myMove.bet_amount > info->minimumBet )
           myMove.move = Move::MOVE_RAISE;
         else
@@ -432,7 +432,7 @@ namespace Poker {
       is.handStrength = int( probWin * 3.0);
       auto pOne = info->getPlayerByID(1);
       is.enyMove = pOne->move.move;
-
+      is.street = info->street;
       return is;
     }
 
@@ -442,24 +442,68 @@ namespace Poker {
         endRoundUtility = 0.0f;
         startingCash = me->bankroll;
       }
+      PlayerMove myPMove;
+      //  If enemy folded, JUST CALL!
+      if( info->getPlayerByID(1)->move.move == Move::MOVE_FOLD) {
+        myPMove.move = Move::MOVE_CALL;
+        myPMove.bet_amount = info->minimumBet;
+        return myPMove;
+      }
       auto newInfoSet = packTableIntoInfoSet(info, me);
-      map<Move, float> probDist;
+      map<Move, float> utilityDist;
       auto [updatedIter, ISWasNew] = policy.try_emplace(newInfoSet);
       hitCount[newInfoSet]++;
-      // ISWasNew is TRUE is the RGS key didn't exist in the CFR table
+      // ISWasNew is TRUE is the IS key didn't exist in the CFR table
       // updatedIter is an iterator to the key corresponding to the game state whether or not the insertion took place
       if( ISWasNew ) {
         // make a random move if we don't have a policy
-        probDist[Move::MOVE_FOLD]  = 1.0;
-        probDist[Move::MOVE_CALL]  = 1.0;
-        probDist[Move::MOVE_RAISE] = 1.0;
-        normalizeMap(probDist);
-        policy[newInfoSet] = probDist;
+        utilityDist[Move::MOVE_FOLD]  = 0.0;
+        utilityDist[Move::MOVE_CALL]  = 0.0;
+        utilityDist[Move::MOVE_RAISE] = 0.0;
+        policy[newInfoSet] = utilityDist;
       }
       else {
         // policy is already in there
-        probDist = policy[newInfoSet];
+        utilityDist = policy[newInfoSet];
       }
+
+      // Form probability distribution from utility distribution
+      
+      // find minimum
+      float minel = (*std::min_element(utilityDist.begin(), utilityDist.end(), [](const auto& l, const auto& r) { return l.second < r.second; })).second;
+      float maxel = (*std::min_element(utilityDist.begin(), utilityDist.end(), [](const auto& l, const auto& r) { return l.second > r.second; })).second;
+      float tot = 0.0f;
+
+      bool allNegative = true;
+      for( auto& pair : utilityDist ) {
+        if( pair.second >= 0.0f ) {
+          allNegative = false;
+          break;
+        }
+      }
+      if( allNegative ) {
+        // throw out everything except the least negative
+        for( auto& pair : utilityDist ) {
+          if( pair.second != maxel )
+            pair.second = 0.0f;
+        }
+      } else {
+        // otherwise make them all positive
+        for( auto& pair : utilityDist ) 
+          pair.second -= minel;
+      }
+      // Finally, add a bit to each to explore
+      for( auto& pair : utilityDist )
+        pair.second += maxel/float(500);
+
+
+      //normalize
+      normalizeMap(utilityDist);
+
+      for( auto& pair : utilityDist ) 
+        pair.second = clamp(pair.second, 0.001f, 0.999f);
+      // UtilityDist is now a probability distribution
+
 
       // Sample the choices according to the prob dist
       std::uniform_real_distribution<float> dist(0.0f, 1.0f);
@@ -468,7 +512,7 @@ namespace Poker {
       float choice = dist(rng);
       float partialSum = 0.0f;
       Move myMove;
-      for( auto& pair : probDist ) {
+      for( auto& pair : utilityDist ) {
         partialSum += pair.second;
         if(partialSum >= choice) {
           myMove = pair.first;
@@ -477,9 +521,9 @@ namespace Poker {
       }
       // Add the move and infoset to the update list
       InfoSetsToUpdate[newInfoSet] = myMove;
+      hitCount[newInfoSet]++;
 
       // calculate bet amount and GO GO GO
-      PlayerMove myPMove;
       if( myMove == Move::MOVE_FOLD) myPMove.bet_amount = 0;
       else if( myMove == Move::MOVE_CALL) myPMove.bet_amount = info->minimumBet;
       else if( myMove == Move::MOVE_RAISE) myPMove.bet_amount = info->minimumBet * 2;
@@ -495,20 +539,27 @@ namespace Poker {
 
     void KillBot::callback(const shared_ptr<Table> info, const shared_ptr<Player> me) {
         // Weights backpropagation
-        endRoundUtility = float(me->bankroll - startingCash) / float(info->bigBlind);
+        endRoundUtility = float(me->bankroll - startingCash) / float(startingCash);
+        params.utilityScale = 1.0;
+        params.decayRate = 0.0;
+        //if( endRoundUtility < 0.0f) endRoundUtility *= 2.0;
         float utilityScale = params.utilityScale * float(endRoundUtility);
         float decayRate = params.decayRate;
         // downplay corrections if the uncertainty in hand estimation was high
         //if( handEstimateUncertainty > 0.10 ) utilityScale *= 0.1;
 
         for(auto& pair : InfoSetsToUpdate) {
-          auto& MoveMap = policy[pair.first];
-          float updateFac = 1.0;
-          updateFac += utilityScale * (0.001 + exp(decayRate * float(hitCount[pair.first])));
-          MoveMap[pair.second] *= updateFac;
-          MoveMap[pair.second] = clamp(MoveMap[pair.second], 0.001f, 0.999f);
-          normalizeMap(MoveMap);
-          policy[pair.first] = MoveMap;
+          auto& MoveUtilities = policy[pair.first];
+          //float updateFac = 1.0;
+          //updateFac += utilityScale * (0.001 + exp(decayRate * float(hitCount[pair.first])));
+          //updateFac += utilityScale;
+          MoveUtilities[pair.second] += utilityScale;
+          //MoveUtilities[pair.second] = clamp(MoveUtilities[pair.second], 0.001f, 0.999f);
+          //normalizeMap(MoveUtilities);
+          policy[pair.first] = MoveUtilities;
+          if( !utility[pair.first])
+            utility[pair.first] = 0.0f;
+          utility[pair.first] += endRoundUtility;
         }
 
         if (endRoundUtility > 0.0f) numWins++;

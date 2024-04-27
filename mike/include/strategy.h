@@ -77,7 +77,7 @@ namespace Poker {
             HandRank handrank = HandRank::UNDEF_HANDRANK;                  
             Card maincard = Card();        
             bool operator==(const ReducedFullHandRank& other) const {
-                return this->handrank == other.handrank and this->maincard == other.maincard;
+                return this->handrank == other.handrank && this->maincard == other.maincard;
             }
             bool operator<(const ReducedFullHandRank& other) const {
                 if( this->handrank > other.handrank) return false;
@@ -199,8 +199,9 @@ namespace Poker {
                 //std::vector<Move> enemyMoveHistory;
                 int handStrength;
                 Move enyMove;
+                int street;
                 bool operator==(const InfoSet& other) const {
-                    return handStrength == other.handStrength && enyMove == other.enyMove;
+                    return handStrength == other.handStrength && enyMove == other.enyMove && street == other.street;
                 }
             };
             struct ISHash {
@@ -208,18 +209,19 @@ namespace Poker {
                     size_t hash = 0;
                     hashCombine(hash, is.handStrength);
                     hashCombine(hash, static_cast<int>(is.enyMove));
+                    hashCombine(hash, is.street);
                     return hash;
                 }
             };
             struct ModelParameters {
                 float decayRate = -0.001;
-                float utilityScale = 0.05;
+                float utilityScale = 0.01;
             };
             // for call bot: decay -0.001, utilityScale 0.02
 
             //void updateParameters(std::vector<float>) override;
             InfoSet packTableIntoInfoSet(const std::shared_ptr<Table> info, const shared_ptr<Player> me);
-            unordered_map<InfoSet, map<Move, float>, ISHash> policy;
+            unordered_map<InfoSet, map<Move, float>, ISHash> policy;        // value is a map between moves and utility
             unordered_map<InfoSet, size_t, ISHash> hitCount;
             size_t numRounds = 0;
             size_t numWins   = 0;
@@ -227,13 +229,22 @@ namespace Poker {
             int startingCash = 0;
             float handEstimateUncertainty = 0.0f; // used in backprop
             unordered_map<InfoSet, Move, ISHash> InfoSetsToUpdate;
+            unordered_map<InfoSet, float, ISHash> utility;
             ModelParameters params;
             void callback(const std::shared_ptr<Table> info, const shared_ptr<Player> me) override;
             void updateParameters(std::vector<float>) override;
             void normalizeMap(map<Move, float>& in) {
+                size_t numZeros = 0;
                 float t = 0.0;
-                for(auto& pair : in) 
-                t += pair.second;
+                for(auto& pair : in)  {
+                    t += pair.second;
+                    if( pair.second == 0.0f) numZeros++;
+                }
+                if( numZeros == in.size() ) {
+                    for(auto& pair : in)
+                        pair.second += 1.0f;
+                    t = float(in.size());
+                }
                 for(auto& pair : in) 
                 pair.second /= t;
             };

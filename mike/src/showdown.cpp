@@ -144,7 +144,7 @@ namespace Poker {
             }
         }
 
-        if ( three_count == 1 and two_count >= 1 ) {   // FULL  HOUSE
+        if ( three_count == 1 && two_count >= 1 ) {   // FULL  HOUSE
             full_house_cards.insert(full_house_cards.end(), multi_three_kind_cards.begin(), multi_three_kind_cards.end());
             full_house_cards.insert(full_house_cards.end(), multi_pair_cards.begin(), multi_pair_cards.begin()+2); // multi_pair_cards should be sorted already. This should pick the best pair
             ret.handrank = HandRank::FULL_HOUSE;
@@ -166,7 +166,7 @@ namespace Poker {
             else {
                 const bool descending = straightRanks[i] == straightRanks[i-1] - 1;
                 const bool flat = straightRanks[i] == straightRanks[i-1];
-                if ( descending and !flat) {
+                if ( descending && !flat) {
                     straightCount++;
                     // Put back the first card from the vector of cards with descending Rank
                     // In the eyes of a straight, all of these cards are equivalent
@@ -178,7 +178,7 @@ namespace Poker {
                         DEREF_COMPLEMENT_RETURN;
                     }
                 }
-                else if (not (flat or descending)) {
+                else if (!(flat || descending)) {
                     straightCount = 1;
                     straight_cards.clear();
                 }

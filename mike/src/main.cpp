@@ -39,8 +39,8 @@ int main() {
     //aiInfo.emplace("Mike", std::vector<float> 
 //{-1.0964357164653398, 0.6858257039331285, -0.6811199899767748, -0.9463686817487581, -0.17352864790969913, -1.0813763189426324});
     aiInfo.emplace("KillBot", std::vector<float>{});
-    aiInfo.emplace("call", std::vector<float>{});
-    //aiInfo.emplace("Matt", std::vector<float> {0.44, 0.46, 0.54});
+    //aiInfo.emplace("call", std::vector<float>{});
+    aiInfo.emplace("Matt", std::vector<float> {0.25, 0.46, 0.70});
     // Create Table and fill AI List
     auto myTable = Table();
     // unpack AI list
@@ -64,7 +64,7 @@ int main() {
 
     auto game = std::make_shared<Game>(myTable);
 
-    const int N = 10000;
+    const int N = 5000;
     const int superN = 1;
     size_t printInterval = 200;
     // setup some statistics
@@ -79,7 +79,7 @@ int main() {
     for(int jN = 0; jN < superN; jN++) {
       auto pZeroStrat = dynamic_pointer_cast<KillBot>(pZero->strategy);
       pZeroStrat->reset();
-      float firstSet, lastSet = 0.0f;
+      float firstSet = 0.0f, lastSet = 0.0f;
       int iT = 0;
       for(int iN = 0; iN < N; iN++) {
           int bigInd = N*jN + iN;
@@ -125,15 +125,14 @@ int main() {
     std::cout << std::endl;
     //std::cout << "Average learning rate: = " << avgLR << std::endl;
 
-    
-
 
     //Print policy
 
     auto pZeroStrat = dynamic_pointer_cast<KillBot>(pZero->strategy);
     for(const auto& p : pZeroStrat->policy) {
       Move tmp = p.first.enyMove;
-      std::cout << "Bin: " << " hand " << p.first.handStrength << " oppMove " << tmp << " (" << pZeroStrat->hitCount[p.first] << ")" << std::endl;
+      std::cout << "str: "<< p.first.street << " hand " << p.first.handStrength << " oppMove " << tmp << " (" << pZeroStrat->hitCount[p.first] << ")"
+            << " [" << pZeroStrat->utility[p.first] << "]" << std::endl;
       for(auto& p1 : p.second) {
         Move m = p1.first;
         std::cout << m << " " << p1.second << " ";

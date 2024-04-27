@@ -8,7 +8,7 @@ namespace Poker{
     Player::Player(int pos, int pID) { position = static_cast<PlayerPosition>(pos); playerID = pID; }
     
     PlayerMove Player::makeMove(shared_ptr<Table> info) {
-        if ( not strategy ) 
+        if ( ! strategy ) 
             strategy = make_unique<Strategy>();
         PlayerMove move = strategy->makeMove(info, make_shared<Player>(*this));
         this->move = move;
