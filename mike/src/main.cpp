@@ -39,8 +39,9 @@ int main() {
     //aiInfo.emplace("Mike", std::vector<float> 
 //{-1.0964357164653398, 0.6858257039331285, -0.6811199899767748, -0.9463686817487581, -0.17352864790969913, -1.0813763189426324});
     aiInfo.emplace("KillBot", std::vector<float>{});
+    aiInfo.emplace("sequence", std::vector<float>{});
     //aiInfo.emplace("call", std::vector<float>{});
-    aiInfo.emplace("Matt", std::vector<float> {0.25, 0.46, 0.70});
+    //aiInfo.emplace("Matt", std::vector<float> {0.25, 0.46, 0.70});
     // Create Table and fill AI List
     auto myTable = Table();
     // unpack AI list
@@ -57,12 +58,21 @@ int main() {
       auto p = myTable.getPlayerByID(i);
       p->strategy->updateParameters(aiParams[i]);
     }
+    auto pOneStrat = dynamic_pointer_cast<SequenceMoveAI>(myTable.getPlayerByID(1)->strategy);
+    PlayerMove d;
+    d.move = Move::MOVE_CALL;
+    d.bet_amount = -1;   // will be set later
+    pOneStrat->moveList.emplace_back(d);
+
+
     std::random_device rd;
     // set blind amounts
     myTable.bigBlind = 10;
     myTable.smallBlind = 5;
 
     auto game = std::make_shared<Game>(myTable);
+
+
 
     const int N = 5000;
     const int superN = 1;
@@ -140,7 +150,7 @@ int main() {
       std::cout << std::endl;
     }
 
-
+    pZeroStrat->savePolicy("policy.txt");
     /*
     // Calculates pre-flop ranges
     vector<float> avgs;

@@ -196,13 +196,13 @@ namespace Poker {
             using Strategy::Strategy;
             PlayerMove makeMove(std::shared_ptr<Table> info, const shared_ptr<Player>) override;
             struct InfoSet {
-                //std::vector<Move> enemyMoveHistory;
                 int handStrength;
                 Move enyMove;
                 int street;
                 bool operator==(const InfoSet& other) const {
                     return handStrength == other.handStrength && enyMove == other.enyMove && street == other.street;
                 }
+                
             };
             struct ISHash {
                 size_t operator()(const InfoSet& is) const {
@@ -224,6 +224,7 @@ namespace Poker {
             unordered_map<InfoSet, map<Move, float>, ISHash> policy;        // value is a map between moves and utility
             unordered_map<InfoSet, size_t, ISHash> hitCount;
             size_t numRounds = 0;
+            size_t numIterations = 0;
             size_t numWins   = 0;
             float endRoundUtility = 0.0;
             int startingCash = 0;
@@ -255,6 +256,8 @@ namespace Poker {
                 hitCount.clear();
                 endRoundUtility = 0.0;
             }
+            void savePolicy(std::string outfile);
+            void loadPolicy(std::string infile);
     };
 
 

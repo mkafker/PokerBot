@@ -64,7 +64,7 @@ namespace Poker {
         auto clamp = [](int a, int b, int c) -> int { if(a<b) a=b; if(a>c) a=c; return a;};
         
         PlayerMove myMove = moveList.at(index);
-        if( index != moveList.size())
+        if( index != moveList.size() - 1)
             index++;
         // sanitize the move... unnecessary?
         if( myMove.move == Move::MOVE_FOLD) myMove.bet_amount = 0;
@@ -469,39 +469,26 @@ namespace Poker {
 
       // Form probability distribution from utility distribution
       
-      // find minimum
+      
       float minel = (*std::min_element(utilityDist.begin(), utilityDist.end(), [](const auto& l, const auto& r) { return l.second < r.second; })).second;
       float maxel = (*std::min_element(utilityDist.begin(), utilityDist.end(), [](const auto& l, const auto& r) { return l.second > r.second; })).second;
-      float tot = 0.0f;
+      bool allNegative = maxel < 0.0f;
+      float possum = 0;
 
-      bool allNegative = true;
-      for( auto& pair : utilityDist ) {
-        if( pair.second >= 0.0f ) {
-          allNegative = false;
-          break;
-        }
-      }
-      if( allNegative ) {
-        // throw out everything except the least negative
-        for( auto& pair : utilityDist ) {
-          if( pair.second != maxel )
-            pair.second = 0.0f;
-        }
-      } else {
-        // otherwise make them all positive
-        for( auto& pair : utilityDist ) 
-          pair.second -= minel;
-      }
+      // trim negatives
+      for( auto& pair: utilityDist )
+        pair.second = max(pair.second, 0.0f);
+      
+
       // Finally, add a bit to each to explore
-      for( auto& pair : utilityDist )
-        pair.second += maxel/float(500);
-
+      //for( auto& pair : utilityDist )
+      //  pair.second += maxel/float(2000);
 
       //normalize
       normalizeMap(utilityDist);
 
-      for( auto& pair : utilityDist ) 
-        pair.second = clamp(pair.second, 0.001f, 0.999f);
+      //for( auto& pair : utilityDist ) 
+      //  pair.second = clamp(pair.second, 0.001f, 0.999f);
       // UtilityDist is now a probability distribution
 
 
@@ -522,6 +509,7 @@ namespace Poker {
       // Add the move and infoset to the update list
       InfoSetsToUpdate[newInfoSet] = myMove;
       hitCount[newInfoSet]++;
+      numIterations++;
 
       // calculate bet amount and GO GO GO
       if( myMove == Move::MOVE_FOLD) myPMove.bet_amount = 0;
@@ -532,8 +520,6 @@ namespace Poker {
       if( myPMove.bet_amount == me->bankroll) myMove = Move::MOVE_ALLIN;
       myPMove.move = myMove;
 
-      // incremement round counter and return
-      numRounds++;
       return myPMove;
     }
 
@@ -547,21 +533,19 @@ namespace Poker {
         float decayRate = params.decayRate;
         // downplay corrections if the uncertainty in hand estimation was high
         //if( handEstimateUncertainty > 0.10 ) utilityScale *= 0.1;
-
-        for(auto& pair : InfoSetsToUpdate) {
+        float t = numIterations;
+        for(auto p = InfoSetsToUpdate.begin(); p != InfoSetsToUpdate.end(); p++) {
+          auto& pair = *p;
           auto& MoveUtilities = policy[pair.first];
           //float updateFac = 1.0;
-          //updateFac += utilityScale * (0.001 + exp(decayRate * float(hitCount[pair.first])));
-          //updateFac += utilityScale;
-          MoveUtilities[pair.second] += utilityScale;
-          //MoveUtilities[pair.second] = clamp(MoveUtilities[pair.second], 0.001f, 0.999f);
-          //normalizeMap(MoveUtilities);
+          MoveUtilities[pair.second] += numRounds *  float(endRoundUtility);
           policy[pair.first] = MoveUtilities;
           if( !utility[pair.first])
             utility[pair.first] = 0.0f;
           utility[pair.first] += endRoundUtility;
         }
 
+        numRounds++;
         if (endRoundUtility > 0.0f) numWins++;
     }
 
@@ -571,4 +555,56 @@ namespace Poker {
         params.utilityScale = in[1];
       }
     }
+
+    void KillBot::savePolicy(std::string outfile) {
+        std::ofstream outFile(outfile, std::ios_base::out);
+        if( !outFile ) throw;
+
+        // Transform a reduced game state to a string
+        std::ostringstream oss;
+        auto ISintoStream = [&oss] (InfoSet is) {
+          oss << static_cast<int>(is.street) << "," << static_cast<int>(is.handStrength) << "," << static_cast<int>(is.enyMove) << ",";
+        };
+        auto MapIntoStream = [&oss] (map<Move, float> A) {
+          for( const auto& a : A) 
+            oss << static_cast<int>(a.first) << "," << a.second << ",";
+        };
+
+        for(auto& pair : policy) {
+          ISintoStream(pair.first);
+          MapIntoStream(pair.second);
+          oss << std::endl;
+          outFile << oss.str();
+        }
+      outFile.close();
+    }
+    void KillBot::loadPolicy(std::string infile) {
+        std::ifstream inFile(infile);
+        if( !inFile ) throw;
+        std::vector<std::vector<std::string>> data;
+        std::string line;
+        while(std::getline(inFile, line)) {
+            std::vector<std::string> row;
+            std::stringstream ss(line);
+            std::string field;
+            while (std::getline(ss, field, ',')) {
+            row.push_back(field);
+            }
+            data.push_back(row);
+        }
+        policy.clear();
+        for(auto& row : data) {
+          InfoSet key;
+          key.street = std::stoi(row[0]);
+          key.handStrength = std::stoi(row[1]);
+          key.enyMove = static_cast<Move>(std::stoi(row[2]));
+          map<Move, float> value;
+          value[static_cast<Move>(std::stoi(row[3]))] = std::stof(row[4]);
+          value[static_cast<Move>(std::stoi(row[5]))] = std::stof(row[6]);
+          value[static_cast<Move>(std::stoi(row[7]))] = std::stof(row[8]);
+          policy[key] = value;
+        }
+    }
+
+
 }
