@@ -220,15 +220,15 @@ float pyTrainKillBot(const std::vector<float> mikeParams) {
     auto pZero = game->table.getPlayerByID(0);
     float avgLR = 0.0f;
     for(int jN = 0; jN < superN; jN++) {
-      auto pZeroStrat = dynamic_pointer_cast<KillBot>(pZero->strategy);
-      pZeroStrat->reset();
+      //auto pZeroStrat = dynamic_pointer_cast<KillBot>(pZero->strategy);
+      //pZeroStrat->reset();
       float firstSet, lastSet = 0.0f;
       for(int iN = 0; iN < N; iN++) {
           int bigInd = N*jN + iN;
           game->table.setPlayerBankrolls(startingCash);
           game->setup();
           game->doRound();
-          pZero->strategy->callback(make_shared<Table>(game->table), pZero);
+          //pZero->strategy->callback(make_shared<Table>(game->table), pZero);
           pZeroWinnings[bigInd] = (game->table.getPlayerByID(0)->bankroll - startingCash)/myTable.bigBlind; // dimensionless winnings
           float avg = 0.0;
           if( iT == printInterval) {

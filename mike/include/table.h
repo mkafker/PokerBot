@@ -9,6 +9,37 @@
 #include "player.h"
 using namespace std;
 namespace Poker {
+    enum class Street {
+        UNDEF   = -1,
+        PREFLOP = 0,
+        FLOP    = 1,
+        TURN    = 2,
+        RIVER   = 3
+    };
+    static std::unordered_map<Street, string> StreetToString 
+    {
+        {Street::UNDEF, "UNDEF!"},
+        {Street::PREFLOP, "PREFLOP"},
+        {Street::FLOP,    "FLOP"},
+        {Street::TURN,    "TURN"},
+        {Street::RIVER,   "RIVER"}
+    };
+    Street& operator++(Street& s) {
+        auto intform = static_cast<int>(s) + 1;
+        if( intform == 4 ) s = Street::UNDEF;
+        else               s = static_cast<Street>(intform);
+        return s;
+    }
+    Street operator++(Street& s, int) {
+        Street stemp = s;
+        ++s;
+        return stemp;
+    }
+    inline std::ostream& operator<<(std::ostream& os, Street& s) {
+        os << StreetToString[s];
+        return os;
+    }
+
 
     class Player;
     struct PlayerMove;
@@ -17,23 +48,20 @@ namespace Poker {
         private:
             Deck deck;
         public:
-            shared_ptr<random_device> rd;
-            // playerList contains Player classes which by default call every time
-            // Overload the virtual function makeMove to define new behavior
-            vector<shared_ptr<Player>> playerList;
+            vector<Player> playerList;
             
             vector<Card> communityCards;
-            int                 street              = 0;                // phase of the game. 0 = preflop, 1 = flop, 2 = turn, 3 = river
+            Street              street              = Street::PREFLOP;
             int                 bigBlind            = 10;
             int                 smallBlind          = 5;
             int                 pot                 = 0;
             int                 minimumBet          = 0;
             bool skipTurn = false;
             map<shared_ptr<Player>, vector<PlayerMove>> playerMoveMap;
-            shared_ptr<Deck>   getDeck();
+            unique_ptr<Deck>   getDeck();
             void setPlayerList(const vector<string> sVec);
             void resetCards(random_device& );
-            void dealCommunityCards(int );
+            void dealCommunityCards(const Street&);
             void dealPlayersCards(const std::vector<shared_ptr<Player>>);
             void clearPlayerHands();
             void setPlayerBankrolls(int n = 100);
@@ -42,6 +70,6 @@ namespace Poker {
             bool arePlayerPositionsValid(const vector<shared_ptr<Player>>& pList);
 
             void shuffleDeck();
-            shared_ptr<Player> getPlayerByID(const int& id);
+            unique_ptr<Player> getPlayerByID(const int& id);
     };
 }

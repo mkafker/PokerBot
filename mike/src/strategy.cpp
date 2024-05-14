@@ -5,31 +5,8 @@
 #include <sstream>
 #include <fstream>
 namespace Poker {
-    
-    PlayerMove Strategy::makeMove(std::shared_ptr<Table> info, const shared_ptr<Player> p) {
-        // Default behavior: Always call
-        // p = contains last move info
-        auto clamp = [](int a, int b, int c) -> int { if(a<b) a=b; if(a>c) a=c; return a;};
-        PlayerMove myMove;
-        myMove.move = Move::MOVE_CALL;
-        myMove.bet_amount = info->minimumBet;
-        myMove.bet_amount = clamp(myMove.bet_amount, 0, p->bankroll);
-        if( myMove.bet_amount == p->bankroll) myMove.move = Move::MOVE_ALLIN;
-        return myMove;
-    }   
 
-    PlayerMove SingleMoveCallAI::makeMove(std::shared_ptr<Table> info, const shared_ptr<Player> p) {
-        auto clamp = [](int a, int b, int c) -> int { if(a<b) a=b; if(a>c) a=c; return a;};
-        
-        PlayerMove myMove;
-        myMove.move = Move::MOVE_CALL;
-        myMove.bet_amount = info->minimumBet;
-        myMove.bet_amount = clamp(myMove.bet_amount, 0, p->bankroll);
-        if( myMove.bet_amount == p->bankroll) myMove.move = Move::MOVE_ALLIN;
-        return myMove;
-    }   
-    
-    PlayerMove RandomAI::makeMove(std::shared_ptr<Table> info, const shared_ptr<Player> p) {
+    PlayerMove RandomAI::makeMove(const shared_ptr<Table>& info, Player* p) {
 
         // Performs a random valid move
         auto clamp = [](int a, int b, int c) -> int { if(a<b) a=b; if(a>c) a=c; return a;};
@@ -58,7 +35,31 @@ namespace Poker {
         if( myMove.bet_amount == p->bankroll) myMove.move = Move::MOVE_ALLIN;
         return myMove;
     }
-    PlayerMove SequenceMoveAI::makeMove(std::shared_ptr<Table> info, const shared_ptr<Player> p) {
+    /*
+    PlayerMove Strategy::makeMove(const shared_ptr<Table>& info, Player* p) {
+        // Default behavior: Always call
+        // p = contains last move info
+        auto clamp = [](int a, int b, int c) -> int { if(a<b) a=b; if(a>c) a=c; return a;};
+        PlayerMove myMove;
+        myMove.move = Move::MOVE_CALL;
+        myMove.bet_amount = info->minimumBet;
+        myMove.bet_amount = clamp(myMove.bet_amount, 0, p->bankroll);
+        if( myMove.bet_amount == p->bankroll) myMove.move = Move::MOVE_ALLIN;
+        return myMove;
+    }   
+
+    PlayerMove SingleMoveCallAI::makeMove(const shared_ptr<Table>& info, Player* p) {
+        auto clamp = [](int a, int b, int c) -> int { if(a<b) a=b; if(a>c) a=c; return a;};
+        
+        PlayerMove myMove;
+        myMove.move = Move::MOVE_CALL;
+        myMove.bet_amount = info->minimumBet;
+        myMove.bet_amount = clamp(myMove.bet_amount, 0, p->bankroll);
+        if( myMove.bet_amount == p->bankroll) myMove.move = Move::MOVE_ALLIN;
+        return myMove;
+    }   
+    
+    PlayerMove SequenceMoveAI::makeMove(const shared_ptr<Table>& info, Player* p) {
         // Performs a list of moves
         // If it reaches the end of its move sequence, repeats the last one
         auto clamp = [](int a, int b, int c) -> int { if(a<b) a=b; if(a>c) a=c; return a;};
@@ -161,7 +162,7 @@ namespace Poker {
         rgs.RFHR.handrank = myFHR.handrank;
         rgs.RFHR.maincard = *min(myFHR.maincards.begin(), myFHR.maincards.end()); // min actually returns the max rank very cool
         for( auto& p : table.playerList ) {
-          rgs.playerHistory[p->getPosition()].push_back(packBinnedPlayerMove(p->move));
+          rgs.playerHistory[p.getPosition()].push_back(packBinnedPlayerMove(p.move));
         }
         return rgs;
     }
@@ -301,7 +302,7 @@ namespace Poker {
     }
 
 
-    PlayerMove MattAI::makeMove(std::shared_ptr<Table> info, const shared_ptr<Player> p) {
+    PlayerMove MattAI::makeMove(const shared_ptr<Table>& info, Player* p) {
       int numOtherPlayers = info->playerList.size() - 1;
       const double foldCallThres = thresholds[0];
       const double callRaiseThres = thresholds[1];
@@ -334,7 +335,7 @@ namespace Poker {
         thresholds = thresholds_in;
     }
 
-    Mike::InfoSet Mike::packTableIntoInfoSet(const std::shared_ptr<Table> info, std::shared_ptr<Player> me) {
+    Mike::InfoSet Mike::packTableIntoInfoSet(const std::shared_ptr<Table> info, Player& me) {
         InfoSet IS;
         // I am player 0
         shared_ptr<Player> enemy = info->getPlayerByID(1);
@@ -343,11 +344,11 @@ namespace Poker {
         for(const auto& v : enyMoves)
           binnedEnyMoves.emplace_back(v.move);
         IS.enemyMoveHistory = binnedEnyMoves;
-        IS.handStrength = monteCarloSingleHand(me->hand, info->communityCards, 2, 100);
+        IS.handStrength = monteCarloSingleHand(me.hand, info->communityCards, 2, 100);
         return IS;
     }
 
-    PlayerMove Mike::makeMove(std::shared_ptr<Table> info, const shared_ptr<Player> p) {
+    PlayerMove Mike::makeMove(const shared_ptr<Table>& info, Player* p) {
       auto thisIS = packTableIntoInfoSet(info, p);
       PlayerMove myMove;
       constexpr float enyHandStrengthDefault = 0.52;
@@ -395,10 +396,10 @@ namespace Poker {
         myMove.move = Move::MOVE_ALLIN;
 
       if( myMove.move == Move::MOVE_FOLD) myMove.bet_amount = 0;
-      else if( myMove.move == Move::MOVE_CALL) myMove.bet_amount = info->minimumBet;
-      else if( myMove.move == Move::MOVE_RAISE) myMove.bet_amount = info->minimumBet * 2;
-      else if( myMove.move == Move::MOVE_ALLIN) myMove.bet_amount = p->bankroll;
-      myMove.bet_amount = clamp(myMove.bet_amount, 0, p->bankroll);
+      else if( myMove.move == Move::MOVE_CALL) myMove.bet_amount = info.minimumBet;
+      else if( myMove.move == Move::MOVE_RAISE) myMove.bet_amount = info.minimumBet * 2;
+      else if( myMove.move == Move::MOVE_ALLIN) myMove.bet_amount = p.bankroll;
+      myMove.bet_amount = clamp(myMove.bet_amount, 0, p.bankroll);
       if( myMove.bet_amount == p->bankroll) myMove.move = Move::MOVE_ALLIN;
 
       return myMove;
@@ -436,7 +437,7 @@ namespace Poker {
       return is;
     }
 
-    PlayerMove KillBot::makeMove(std::shared_ptr<Table> info, const shared_ptr<Player> me) {
+    PlayerMove KillBot::makeMove(const std::shared_ptr<Table> info, Player& me) {
       if( info->street == 0) {
         InfoSetsToUpdate.clear();
         endRoundUtility = 0.0f;
@@ -474,6 +475,9 @@ namespace Poker {
       float maxel = (*std::min_element(utilityDist.begin(), utilityDist.end(), [](const auto& l, const auto& r) { return l.second > r.second; })).second;
       bool allNegative = maxel < 0.0f;
       float possum = 0;
+
+      //TODO: Do the below trimming in callback
+      // find all infosets in the future and find the probability of hitting each node. multiply that prob by the weights and integrate
 
       // trim negatives
       for( auto& pair: utilityDist )
@@ -605,6 +609,5 @@ namespace Poker {
           policy[key] = value;
         }
     }
-
-
+  */
 }

@@ -48,23 +48,6 @@ namespace Poker {
         {Rank::C_A, 'A'},
         {Rank::UNDEF_RANK, 'X'}
     };
-    static std::unordered_map<Rank, int> rank_to_int_map = 
-    {
-        {Rank::C_2, 0},
-        {Rank::C_3, 1},
-        {Rank::C_4, 2},
-        {Rank::C_5, 3},
-        {Rank::C_6, 4},
-        {Rank::C_7, 5},
-        {Rank::C_8, 6},
-        {Rank::C_9, 7},
-        {Rank::C_T, 8},
-        {Rank::C_J, 9},
-        {Rank::C_Q, 10},
-        {Rank::C_K, 11},
-        {Rank::C_A, 12},
-        {Rank::UNDEF_RANK, -1}
-    };
     class Card {
         public:
             Rank rank;

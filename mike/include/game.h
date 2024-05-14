@@ -9,10 +9,11 @@
 using namespace std;
 
 namespace Poker {
+
+
     class Game {
         public:
             random_device gameRD = random_device();   // consider removal... this is only used in passing to the Deck
-            // The problem with the above is that when Game is copied, a new random_device is created. Maybe not desirable.
             Table      table;                              // The public members of Table are what are visible to all and will serve as input to the AI
             vector<shared_ptr<Player>> activePlayers;                   // The ones playing the game. This is so you can deactivate players if you wanted to. It should not change during a round
             vector<shared_ptr<Player>> foldedPlayers;
@@ -133,7 +134,7 @@ namespace Poker {
                 // deal two cards to all active players
                 table.dealPlayersCards(bettingPlayers);
 
-                table.street = 0;                      // set to preflop
+                table.street = Street::PREFLOP;                      // set to preflop
                 table.pot = 0;
                 table.minimumBet   = table.bigBlind; 
 
@@ -170,7 +171,7 @@ namespace Poker {
                     transferAmount[BB] = BB->bankroll;
                 }
                 // TODO: clean this shit up!!! ^^^^^^
-                while( table.street < 4) {
+                while( table.street <= Street::RIVER) {
                     table.dealCommunityCards( table.street );
                     
                     bool keepgoing = true;                                                            // indicates that we need another round of betting
@@ -335,9 +336,12 @@ namespace Poker {
             }
             
             void print() {
-                for( shared_ptr<Player> p : table.playerList ) {
+                for( const Player& p : table.playerList ) {
                     std::cout << std::endl;
-                    std::cout << "Player " << p->playerID << " at seat " << p->position  << "\t bank: " << p->bankroll << "\t hand: " << p->hand << std::endl;
+                    PlayerPosition pp = p.getPosition();
+                    int bankroll = p.getBankroll();
+                    auto hand = p.getHand();
+                    std::cout << "Player " << p.getPlayerID() << " at seat " << p.getPosition()  << "\t bank: " << bankroll << "\t hand: " << hand << std::endl;
                 }
                 std::cout << "Community cards: " << table.communityCards << std::endl;
                 std::cout << "Pot: " << table.pot << std::endl;

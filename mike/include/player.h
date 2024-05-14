@@ -115,12 +115,13 @@ namespace Poker{
     class Player {
         public:
             int  bankroll;
-            int  playerID;                    // 
-            PlayerPosition  position;                      // seat the player is on. 0 = UTG, 1 = MP, 2 = CO, 3 = BTN, 4 = SB, 5 = BB 
-            PlayerMove  move;
-            FullHandRank FHR;
+            int  playerID;
+            PlayerPosition  position;
+            PlayerMove  move; // remove? 
+            FullHandRank FHR; // remove?
             std::vector<Card> hand;
             std::shared_ptr<Strategy> strategy;
+            // add player move history here?
             
             Player() = default;
             Player(const Player& p) = default;
@@ -131,20 +132,30 @@ namespace Poker{
             Player(int p, int playerID);
 
             const PlayerPosition getPosition() const { return this->position; };
+            const int getBankroll() const { return this->bankroll; };
+            const auto getHand() const { return this->hand; };
             void setPosition(const int& pos) { this->position = static_cast<PlayerPosition>(pos); }
             void setPosition(const PlayerPosition &p) { this->position = p; }
             const int getPlayerID() const { return this->playerID; }
             void setPlayerID(const int& id) { this->playerID = id; }
             void resetHand();
             inline bool isBankrupt();
-            PlayerMove makeMove(std::shared_ptr<Table> tableInfo);
+            PlayerMove makeMove(const std::shared_ptr<Table>& tableInfo);
     };
 
     
     void printPlayerMove(const Player& player, const PlayerMove& move);
 
+    inline bool operator==(const Player& a, const Player& b) {
+        return a.playerID == b.playerID;
+    }
+
 
     inline std::ostream& operator<<(std::ostream& stream, PlayerPosition &a) { 
+        stream << PlayerPosition_to_String[a];
+        return stream;
+    }
+    inline std::ostream& operator<<(std::ostream& stream, const PlayerPosition &a) { 
         stream << PlayerPosition_to_String[a];
         return stream;
     }

@@ -16,8 +16,8 @@ namespace Poker {
     class Player;
     struct Strategy {
         public:
-            virtual PlayerMove makeMove(const std::shared_ptr<Table>, const shared_ptr<Player>);
-            virtual void callback( const std::shared_ptr<Table>, const shared_ptr<Player>) {};
+            virtual PlayerMove makeMove(const std::shared_ptr<Table>& table, Player* me);
+            virtual void callback( const std::shared_ptr<Table>& table, Player* me) {};
             virtual void updateParameters(std::vector<float>)  {};
             /*
             template<typename... Args>
@@ -39,12 +39,13 @@ namespace Poker {
         public:
             // inherit the constructors from the Strategy struct
             using Strategy::Strategy;
-            PlayerMove makeMove(std::shared_ptr<Table> info, const shared_ptr<Player>) override;
+            PlayerMove makeMove(const std::shared_ptr<Table>& , Player* ) override;
     };
+    /*
     struct SingleMoveCallAI : public Strategy {
         public:
             using Strategy::Strategy;
-            PlayerMove makeMove(std::shared_ptr<Table> info, const shared_ptr<Player>) override;
+            PlayerMove makeMove(const std::shared_ptr<Table>& , Player* ) override;
     };
     struct SequenceMoveAI : public Strategy {
         // Strategy instance that follows a sequence of moves
@@ -55,7 +56,7 @@ namespace Poker {
                 index = 0;
                 moveList = vector<PlayerMove>();
             }
-            PlayerMove makeMove(std::shared_ptr<Table> info, const shared_ptr<Player>) override;
+            PlayerMove makeMove(const std::shared_ptr<Table>& , Player* ) override;
     };
 
     struct MoveAwareAI : public Strategy {
@@ -63,7 +64,7 @@ namespace Poker {
         // only heads up games are supported
         public:
             using Strategy::Strategy;
-            PlayerMove makeMove(std::shared_ptr<Table> info, const shared_ptr<Player>) override;
+            PlayerMove makeMove(const std::shared_ptr<Table>& , Player* ) override;
             map<vector<Move>, int> moveSequenceToBet;
             vector<Move> enemyMoves;
     };
@@ -149,7 +150,7 @@ namespace Poker {
         BinnedPlayerMove packBinnedPlayerMove(PlayerMove m);
         PlayerMove unpackBinnedPlayerMove(BinnedPlayerMove m, int minimumBet, int bankroll);
         using Strategy::Strategy;
-        PlayerMove makeMove(std::shared_ptr<Table> info, const shared_ptr<Player>) override;
+        PlayerMove makeMove(const std::shared_ptr<Table>& , Player* ) override;
         unordered_map<ReducedGameState, map<BinnedPlayerMove, float>, RGSHash> CFRTable;       // Maps between the game state and probability to make each move
 
         void dumpCFRTableToFile(std::string outfile);
@@ -166,7 +167,7 @@ namespace Poker {
     struct MattAI : public Strategy {
         public:
             using Strategy::Strategy;
-            PlayerMove makeMove(std::shared_ptr<Table> info, const shared_ptr<Player>) override;
+            PlayerMove makeMove(const std::shared_ptr<Table>& , Player* ) override;
             std::vector<float> thresholds = {0.2, 0.7, 0.9};
             void updateParameters(std::vector<float>) override;
     };
@@ -174,14 +175,14 @@ namespace Poker {
     struct Mike : public Strategy {
         public:
             using Strategy::Strategy;
-            PlayerMove makeMove(std::shared_ptr<Table> info, const shared_ptr<Player>) override;
+            PlayerMove makeMove(const std::shared_ptr<Table>& , Player* ) override;
             struct InfoSet {
                 std::vector<Move> enemyMoveHistory;
                 std::tuple<float, float> handStrength;
             };
             float enyHandStrengthEstimate = -1.0;
             void updateParameters(std::vector<float>) override;
-            InfoSet packTableIntoInfoSet(const std::shared_ptr<Table> info, const shared_ptr<Player> me);
+            InfoSet packTableIntoInfoSet(const std::shared_ptr<Table> info, Player* me);
             std::vector<float> addStrengths = {-0.05, 0.2, 0.5}; // call, raise, allin
             std::vector<float> thresholds = {-0.15, 0.15, 0.25}; // F/C, C/R, R/A
             void callback() {
@@ -194,7 +195,7 @@ namespace Poker {
     struct KillBot : public Strategy {
         public:
             using Strategy::Strategy;
-            PlayerMove makeMove(std::shared_ptr<Table> info, const shared_ptr<Player>) override;
+            PlayerMove makeMove(const std::shared_ptr<Table>& , Player* ) override;
             struct InfoSet {
                 int handStrength;
                 Move enyMove;
@@ -232,7 +233,7 @@ namespace Poker {
             unordered_map<InfoSet, Move, ISHash> InfoSetsToUpdate;
             unordered_map<InfoSet, float, ISHash> utility;
             ModelParameters params;
-            void callback(const std::shared_ptr<Table> info, const shared_ptr<Player> me) override;
+            void callback( const std::shared_ptr<Table>& , Player&) override;
             void updateParameters(std::vector<float>) override;
             void normalizeMap(map<Move, float>& in) {
                 size_t numZeros = 0;
@@ -272,8 +273,7 @@ namespace Poker {
     inline std::string getAIName(SequenceMoveAI*& a) { 
         return "sequence";
     }
-
-
+    */
     static PlayerMove betAmountToMove(int betAmount, shared_ptr<Table>& info, const shared_ptr<Player>& p);
 
 }

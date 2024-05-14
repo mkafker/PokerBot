@@ -14,6 +14,20 @@
 
 using namespace Poker;
 int main() {
+    const auto N = 10000;
+    auto start = std::chrono::steady_clock::now();
+    auto aiInfo = std::multimap<std::string, std::vector<float>>();
+    //aiInfo.emplace("KillBot", std::vector<float>{});
+    //aiInfo.emplace("Matt", std::vector<float> {0.44, 0.46, 0.54});
+    aiInfo.emplace("call", std::vector<float>{});
+    aiInfo.emplace("call", std::vector<float>{});
+  auto [avg, sigma] = monteCarloRounds(N, aiInfo);
+    std::cout << avg << std::endl;
+    std::cout << sigma << std::endl;
+    std::chrono::duration<double> duration = std::chrono::steady_clock::now() - start;
+    std::cout << N << " rounds calculated in " << duration.count() << " seconds, or " 
+    << double(N)/duration.count() << " configurations/s" << std::endl;
+
     /*
     constexpr int N = 2000;
     constexpr int writeevery = 1000;
@@ -32,7 +46,7 @@ int main() {
       }
     }
     */
-
+    /*
     auto aiInfo = std::multimap<std::string, std::vector<float>>();
     //aiInfo.emplace("CFRAI1", std::vector<float>{});
     //aiInfo.emplace("Matt", std::vector<float> {0.44, 0.46, 0.54});
@@ -151,6 +165,8 @@ int main() {
     }
 
     pZeroStrat->savePolicy("policy.txt");
+
+    */
     /*
     // Calculates pre-flop ranges
     vector<float> avgs;

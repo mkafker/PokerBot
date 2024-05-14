@@ -3,13 +3,14 @@
 #include "strategy.h"
 namespace Poker {
 
-    std::shared_ptr<Deck>   Table::getDeck() { return std::make_shared<Deck>(deck); }
-    void Table::dealCommunityCards(int street) {
-        if( street == 1 ) {
+    std::unique_ptr<Deck>   Table::getDeck() { return std::make_unique<Deck>(deck); }
+    void Table::dealCommunityCards(const Street& street) {
+        if( street == Street::UNDEF ) throw;
+        if( street == Street::FLOP ) {
             for(int i = 0; i < 3; i++ ) 
                 communityCards.push_back(deck.pop_card());
         }
-        else if (street > 1) { communityCards.push_back(deck.pop_card()); }
+        else if (street != Street::PREFLOP) { communityCards.push_back(deck.pop_card()); }
     }
     void Table::dealPlayersCards(const std::vector<shared_ptr<Player>> pList) {
         // Deals every active player two cards
@@ -28,6 +29,7 @@ namespace Poker {
             auto guy = make_shared<Player>();
             if (s == "random") 
                     guy->strategy = make_shared<RandomAI>();
+            /*
             else if (s == "call")
                     guy->strategy = make_shared<SingleMoveCallAI>();
             else if (s == "sequence")
@@ -40,6 +42,7 @@ namespace Poker {
                     guy->strategy = make_shared<Mike>();
             else if (s == "KillBot")
                     guy->strategy = make_shared<KillBot>();
+                    */
             else    throw;
             guy->setPosition(playerPositionList[n]);
             guy->playerID = n;
@@ -55,7 +58,8 @@ namespace Poker {
             return pvector;
         }
         else {
-            vector<shared_ptr<Player>> ret (playerList);    // copy constructor
+            vector<shared_ptr<Player>> ret;
+            std::transform(playerList.begin(), playerList.end(), back_inserter<shared_ptr<Player>>, [] (const auto& p) { return make_shared<Player>(p); });
             std::sort(ret.begin(), ret.end(), comp);
             return ret;
         }
@@ -64,13 +68,13 @@ namespace Poker {
     void Table::clearPlayerHands() {
         // clears all player hands
         for(auto P : this->playerList) {
-            P->resetHand();
+            P.resetHand();
         }
     }
     void Table::setPlayerBankrolls(int n) {
         // Sets everybodies wallets to n
-        for(auto P : this->playerList) {
-            P->bankroll = n;
+        for(auto& P : this->playerList) {
+            P.bankroll = n;
         }
     }
 
@@ -103,8 +107,8 @@ namespace Poker {
         return uniquePositionPlayers.size() == pList.size();
     }
 
-    shared_ptr<Player> Table::getPlayerByID(const int& id) {
-        return *std::find_if(this->playerList.begin(), this->playerList.end(), [&id] (const shared_ptr<Player>& p) {return p->playerID == id;});
+    unique_ptr<Player> Table::getPlayerByID(const int& id) {
+        return make_unique<Player>(*std::find_if(this->playerList.begin(), this->playerList.end(), [&id] (const auto& p) {return p.playerID == id;}));
     };
 
 }

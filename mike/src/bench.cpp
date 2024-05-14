@@ -11,22 +11,28 @@
 #include <sstream>
 
 namespace Poker {
-  void benchmarkHandRankCalculator(const uint64_t& N) {
+  void benchmarkHandRankCalculator(const uint64_t& N, const uint16_t Ndeal) {
       auto start = std::chrono::steady_clock::now();
       FullHandRank lastHand;
+        Deck newdeck;
+        newdeck.shuffle();
+    int t = 0;
+        std::vector<Card> cards(Ndeal);
       for(int iN = 0; iN < N; iN++) {
-          Deck newdeck;
-          newdeck.shuffle();          
-          std::vector<Card> cards(7);
-          for(short j=0; j<7; j++)
-              cards[j]=newdeck.pop_card();
-          FullHandRank FHR = calcFullHandRank(cards);
-          if( iN == 0 ) lastHand = FHR;
-          else {
-              if( showdownFHR(lastHand, FHR) == FHR  )    { 
-                  lastHand = FHR;
-              }
-          }   
+        t += Ndeal;
+        if(t >= 52) {
+            newdeck = Deck();
+            newdeck.shuffle();
+        }
+        for(short j=0; j<Ndeal; j++)
+            cards[j]=newdeck.pop_card();
+        FullHandRank FHR = calcFullHandRank(cards);
+        if( iN == 0 ) lastHand = FHR;
+        else {
+            if( showdownFHR(lastHand, FHR) == FHR  )    { 
+                lastHand = FHR;
+            }
+        }   
       }
       std::chrono::duration<double> duration = std::chrono::steady_clock::now() - start;
       std::cout << "Best hand: " << std::endl;
@@ -51,33 +57,6 @@ namespace Poker {
     std::cout << N << " rounds calculated in " << duration.count() << " seconds, or " << double(N)/duration.count() << " rounds/second" << std::endl;
   }
 
-void monteCarloGameStateCompare() {
-    int iT = 0;
-    auto myTable = Table();
-    // populate player list
-    vector<string> aiList = {"call", "random", "random", "random" };
-    myTable.setPlayerList(aiList);
-    myTable.setPlayerBankrolls(100);
-    myTable.bigBlind = 10;
-    myTable.smallBlind = 5;
-    auto game = make_shared<Game>(myTable);
-    // instantiate game in a specific state
-    game->setup();
-    // do a round to make it interesting
-    game->doRound();
-    // convert player 0 to a SequenceMoveAI that always goes all-in
-    auto playerList = myTable.playerList;
-    auto playerOneIt = find_if(playerList.begin(), playerList.end(), [] (const shared_ptr<Player>& p) {return p->playerID == 0; });
-    if ( playerOneIt != playerList.end()) {
-        shared_ptr<Player> playerOne = *playerOneIt;
-
-        auto newStrat = SequenceMoveAI();
-        newStrat.moveList.emplace_back(PlayerMove { Move::MOVE_ALLIN, 0});
-        playerOne->strategy = make_unique<SequenceMoveAI>(newStrat);
-        // player 0 should do nothing but all-in now
-    }
-    game->doRound();
-}
 
 std::tuple<double, double> monteCarloRounds(const uint64_t& N, const std::multimap<std::string, std::vector<float>>& aiInfo) {
     // input: N games, vector of tuples ( Ai type string, ai parameters )
@@ -171,7 +150,7 @@ std::tuple<double, double> monteCarloGames(const uint64_t& N, const std::multima
         game->setup();
         game->doGame();
         //pZeroWinnings[iN] = (game->table.getPlayerByID(0)->bankroll - startingCash)/myTable.bigBlind; // dimensionless winnings
-        pZeroWinnings[iN] = game->lastRoundWinner == game->table.getPlayerByID(0) ? 1 : 0;
+        pZeroWinnings[iN] = *game->lastRoundWinner == *game->table.getPlayerByID(0) ? 1 : 0;
         totalRounds+=game->nRounds;
     }
 
