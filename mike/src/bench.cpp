@@ -151,7 +151,7 @@ std::tuple<double, double> monteCarloGames(const uint64_t& N, const std::multima
         game->doGame();
         //pZeroWinnings[iN] = (game->table.getPlayerByID(0)->bankroll - startingCash)/myTable.bigBlind; // dimensionless winnings
         pZeroWinnings[iN] = *game->lastRoundWinner == *game->table.getPlayerByID(0) ? 1 : 0;
-        totalRounds+=game->nRounds;
+        totalRounds+=game->roundCount;
     }
 
     std::chrono::duration<double> duration = std::chrono::steady_clock::now() - start;

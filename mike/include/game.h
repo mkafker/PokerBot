@@ -15,41 +15,33 @@ namespace Poker {
         public:
             random_device gameRD = random_device();   // consider removal... this is only used in passing to the Deck
             Table      table;                              // The public members of Table are what are visible to all and will serve as input to the AI
-            vector<shared_ptr<Player>> activePlayers;                   // The ones playing the game. This is so you can deactivate players if you wanted to. It should not change during a round
-            vector<shared_ptr<Player>> foldedPlayers;
-            vector<shared_ptr<Player>> allInPlayers;
-            vector<shared_ptr<Player>> bettingPlayers;
+            vector<Player*> activePlayers;                   // The ones playing the game. This is so you can deactivate players if you wanted to. It should not change during a round
+            vector<Player*> foldedPlayers;
+            vector<Player*> allInPlayers;
+            vector<Player*> bettingPlayers;
             shared_ptr<Player> lastRoundWinner;
-            int nRounds;
+            int roundCount = 0;
 
-            bool printMovesToRecord = false;
-            map<shared_ptr<Player>, vector<PlayerMove>> moveRecord;
-            vector<Table> tableRecord;  // unintended but maybe doesnt matter: copies of Tables copy a ptr to its players, so no historical Player information can be gleaned from this object
-            // It would be cleaner to only store the information that we want, such as player bankrolls and pot sizes
-
-            Game() { }
-            Game(const Table& t) { table = t; }
             void setup() {
                 // The table must have its blinds and bankrolls set up before calling setup
                 table.resetCards(gameRD);
-                activePlayers = table.getPlayersInBettingOrder();
+                activePlayers = table.getPlayersInBettingOrder(vector<Player*>());
                 allInPlayers.clear();
                 foldedPlayers.clear();
                 lastRoundWinner = nullptr;
                 bettingPlayers.clear();
-                copy_if(activePlayers.begin(), activePlayers.end(), back_inserter(bettingPlayers), [] (shared_ptr<Player> P) { return P->bankroll > 0; });
+                copy_if(activePlayers.begin(), activePlayers.end(), back_inserter(bettingPlayers), [] (auto* P) { return P->bankroll > 0; });
             }
             void resetToDefaults(int n = 6) {
                 // creates a fresh game of standard n player poker
                 const vector<string> aiList (n, "random");
                 table.setPlayerList(aiList);
-                table.resetCards(gameRD);
-                activePlayers = table.getPlayersInBettingOrder();
-                allInPlayers.clear();
-                foldedPlayers.clear();
-                lastRoundWinner = nullptr;
                 table.setPlayerBankrolls(100);
-                bettingPlayers = activePlayers;
+                setup();
+            }
+            Game(Table& t) {
+                table = t;
+                setup();
             }
 
             void setNonBRPlayersPositions(int shift = 0) {
@@ -59,7 +51,7 @@ namespace Poker {
                 // Also rotates seats if desired by shift
                 // Shift = +1 is typical for rotating seats for hold 'em
                 bettingPlayers.clear();
-                copy_if(activePlayers.begin(), activePlayers.end(), back_inserter(bettingPlayers), [] (shared_ptr<Player> P) { return P->bankroll > 0; });
+                copy_if(activePlayers.begin(), activePlayers.end(), back_inserter(bettingPlayers), [] (auto* P) { return P->bankroll > 0; });
                 auto nPlayers = bettingPlayers.size();
                 if( nPlayers > 1 ) {
                     std::vector<PlayerPosition> playerPositionList = numPlayersToPositionList(nPlayers);
@@ -68,7 +60,7 @@ namespace Poker {
                     // After calling this function, they will have valid positions, however
                     bettingPlayers = table.getPlayersInBettingOrder(bettingPlayers);
                     for(int i = 0; i < nPlayers; i++ ) {
-                        shared_ptr<Player> P = bettingPlayers[i];
+                        Player* P = bettingPlayers[i];
                         P->setPosition(playerPositionList[i]);
                         if( shift != 0 ) {
                             int newPos = static_cast<int>(P->getPosition());
@@ -80,7 +72,6 @@ namespace Poker {
             }
 
             void doGame() {
-                nRounds = 0;
                 auto nPlayers = bettingPlayers.size();
                 while( nPlayers > 1) {
                     table.resetCards(gameRD);
@@ -88,13 +79,13 @@ namespace Poker {
                     // rotate player positions
                     setNonBRPlayersPositions(1);
                     nPlayers = bettingPlayers.size();
-                    nRounds++;
+                    roundCount++;
                 }
 
                 #if PRINT
                 if ( lastRoundWinner ) {
                     std::cout << "===========================================================================" << std::endl;
-                    std::cout << "Game finished: " << *lastRoundWinner << " wins " << lastRoundWinner->FHR <<  std::endl;
+                    std::cout << "Game finished: " << *lastRoundWinner << " wins " ;
                     std::cout << "===========================================================================" << std::endl;
                 } else {
                     std::cout << "===========================================================================" << std::endl;
@@ -114,17 +105,17 @@ namespace Poker {
                 setNonBRPlayersPositions();
                 // If only one player, that's the winner!
                 if( bettingPlayers.size() == 1 ) {
-                    lastRoundWinner = bettingPlayers[0];
+                    lastRoundWinner = make_shared<Player>(*bettingPlayers[0]);
                     return;
                 };
 
                 bettingPlayers = table.getPlayersInBettingOrder(bettingPlayers);
                 const auto bPlayersBackup = bettingPlayers;
 
-                std::shared_ptr<Player> winningPlayer;
-                // bankrolls are updated after the round, transferAmount is used to keep track of what people owe
-                unordered_map<shared_ptr<Player>, int> transferAmount;
-                for_each(bettingPlayers.begin(), bettingPlayers.end(), [&transferAmount] (const shared_ptr<Player>& p) { transferAmount[p]=0;});
+
+                // transferAmount is used to keep track of what people owe
+                map<Player*, int> transferAmount;
+                for_each(bettingPlayers.begin(), bettingPlayers.end(), [&transferAmount] (Player* p) { transferAmount[p]=0;});
 
                 table.clearPlayerHands();
 
@@ -133,48 +124,38 @@ namespace Poker {
 
                 // deal two cards to all active players
                 table.dealPlayersCards(bettingPlayers);
+                table.playerMoveMap.clear();
 
                 table.street = Street::PREFLOP;                      // set to preflop
                 table.pot = 0;
                 table.minimumBet   = table.bigBlind; 
 
-                // process blind bets
-                auto SB = *find_if(bettingPlayers.begin(), bettingPlayers.end(), [](const shared_ptr<Player>& a) { return a->getPosition() == PlayerPosition::POS_SB;});
-                auto BB = *find_if(bettingPlayers.begin(), bettingPlayers.end(), [](const shared_ptr<Player>& a) { return a->getPosition() == PlayerPosition::POS_BB;});
+                // Process blind bets
+                auto SB = *find_if(bettingPlayers.begin(), bettingPlayers.end(), [](const Player* a) { return a->getPosition() == PlayerPosition::POS_SB;});
+                auto BB = *find_if(bettingPlayers.begin(), bettingPlayers.end(), [](const Player* a) { return a->getPosition() == PlayerPosition::POS_BB;});
+                auto blinds = vector<Player*>({SB, BB});
 
-                if( SB->bankroll > table.smallBlind ) {
-                    table.pot += table.smallBlind;
-                    SB->move.bet_amount = table.smallBlind;
-                    SB->move.move = Move::MOVE_CALL;
-                    transferAmount[SB] = table.smallBlind;
-                } else {
-                    // if paying blind bet bankrupts players, force their move
-                    bettingPlayers.erase(find(bettingPlayers.begin(), bettingPlayers.end(), SB));
-                    allInPlayers.emplace_back(SB);
-                    SB->move.bet_amount = SB->bankroll;
-                    SB->move.move = Move::MOVE_ALLIN;
-                    table.pot += SB->move.bet_amount;
-                    transferAmount[SB] = SB->bankroll;
+                for(auto& b : blinds) {
+                    if( b->bankroll > table.smallBlind ) {
+                        table.pot += table.smallBlind;
+                        table.playerMoveMap[b].emplace_back(PlayerMove(Move::MOVE_CALL, table.smallBlind));
+                        transferAmount[b] = table.smallBlind;
+                    } else {
+                        // if paying blind bet bankrupts players, force their move
+                        bettingPlayers.erase(find(bettingPlayers.begin(), bettingPlayers.end(), b));
+                        allInPlayers.emplace_back(b);
+                        const auto bankroll = b->bankroll;
+                        table.playerMoveMap[b].emplace_back(PlayerMove(Move::MOVE_ALLIN, bankroll));
+                        table.pot += bankroll;
+                        transferAmount[b] = bankroll;
+                    }
                 }
-                if( BB->bankroll > table.bigBlind ) {
-                    table.pot += table.bigBlind;
-                    BB->move.bet_amount = table.bigBlind;
-                    BB->move.move = Move::MOVE_CALL;
-                    transferAmount[BB] = table.bigBlind;
-                } else {
-                    // if paying blind bet bankrupts players, force their move
-                    bettingPlayers.erase(find(bettingPlayers.begin(), bettingPlayers.end(), BB));
-                    allInPlayers.emplace_back(BB);
-                    BB->move.bet_amount = BB->bankroll;
-                    BB->move.move = Move::MOVE_ALLIN;
-                    table.pot += BB->move.bet_amount;
-                    transferAmount[BB] = BB->bankroll;
-                }
-                // TODO: clean this shit up!!! ^^^^^^
-                while( table.street <= Street::RIVER) {
+
+                // Begin the actual round
+                while( table.street <= Street::RIVER ) {
                     table.dealCommunityCards( table.street );
                     
-                    bool keepgoing = true;                                                            // indicates that we need another round of betting
+                    bool keepgoing = true;
                     #if PRINT
                     std::cout << "================================================" << std::endl;
                     std::cout << "Phase " << table.street << " " << table.communityCards <<  std::endl;
@@ -192,7 +173,7 @@ namespace Poker {
                         auto i = bettingPlayers.begin();
 
                         while (i != bettingPlayers.end()) {
-                            shared_ptr<Player> P = *i;
+                            auto P = *i;
                             PlayerMove Pmove =  P->makeMove(make_shared<Table>(table));
                             if ( !table.skipTurn ) {
                                 table.playerMoveMap[P].emplace_back(Pmove);
@@ -202,9 +183,6 @@ namespace Poker {
                                 // Set the new minimum bet if player raised
                                 table.minimumBet = max(Pmove.bet_amount, table.minimumBet);
 
-                                if( printMovesToRecord ) moveRecord[P].emplace_back(Pmove);
-                                if( printMovesToRecord ) tableRecord.emplace_back(table);
-                                
                                 if( folded ) {
                                     //take their money now
                                     P->bankroll -= transferAmount[P];
@@ -240,36 +218,29 @@ namespace Poker {
                     table.street++;
                 }
 
-                std::vector<shared_ptr<Player>> showdownPlayers;
-                showdownPlayers.insert(showdownPlayers.end(), bettingPlayers.cbegin(), bettingPlayers.cend());
-                showdownPlayers.insert(showdownPlayers.end(), allInPlayers.cbegin(), allInPlayers.cend());
+                std::vector<Player*> showdownPlayers;
+                showdownPlayers.insert(showdownPlayers.end(), bettingPlayers.begin(), bettingPlayers.end());
+                showdownPlayers.insert(showdownPlayers.end(), allInPlayers.begin(), allInPlayers.end());
 
-                winningPlayer = determineWinner(showdownPlayers);
-                // process bankrolls
-                for_each(showdownPlayers.begin(), showdownPlayers.end(), [&transferAmount] (const shared_ptr<Player>& p) {
-                    p->bankroll -= transferAmount[p];
-                    transferAmount[p]=0;
-                });
+                auto [winningPlayerPtr, winningFHR] = determineWinner(showdownPlayers);
 
-                if( winningPlayer ) {
-                    // finally, reward player
-                    winningPlayer->bankroll += table.pot;
-                    lastRoundWinner = winningPlayer;
+                if( winningPlayerPtr ) {
+                    // process bankrolls
+                    for(auto p : showdownPlayers) {
+                        p->bankroll -= transferAmount[p];
+                    };
+                    // reward winner
+                    winningPlayerPtr->bankroll += table.pot;
+                    lastRoundWinner = make_shared<Player>(*winningPlayerPtr);
                     #if PRINT
-                    // TODO: fix UNDEF_HAND bug
-                    std::cout << *lastRoundWinner << " won with a " << lastRoundWinner->FHR << std::endl;
+                    std::cout << *lastRoundWinner << " won with a " << winningFHR << std::endl;
                     #endif
-
                 }
                 else {
                     #if PRINT
                     std::cout << "Draw, returning bets!" << std::endl;
                     #endif
-                    // else, draw
                     lastRoundWinner = nullptr;
-                    for( shared_ptr<Player> P : showdownPlayers ) {
-                        P->bankroll += P->move.bet_amount;
-                    }
                 }
 
                 allInPlayers.clear();
@@ -278,28 +249,24 @@ namespace Poker {
             }
 
             
-            shared_ptr<Player> determineWinner(vector<shared_ptr<Player>>& playersIn ) {
-                // From a vector of pointers to player, returns a pointer to the winner
-                // Modifies the player by populating their FullHandRank
+            std::tuple<Player*, FullHandRank> determineWinner(vector<Player*> playersIn ) {
+                // Determines the winner from a vector of Players, as well as the winning hand
                 auto playersInBegin = playersIn.begin();
                 auto playersInEnd   = playersIn.end();
                 size_t numPlayers = std::distance(playersInBegin, playersInEnd);
 
-                if ( numPlayers == 0) { return nullptr; }   // error
-
-                else if ( numPlayers == 1) {
+                if ( numPlayers == 1) {
                     // just compute the guy's FHR and return him
                     auto cards = table.communityCards;
                     cards.insert(cards.end(), playersIn[0]->hand.begin(), playersIn[0]->hand.end());
-                    playersIn[0]->FHR = calcFullHandRank(cards);
-                    return playersIn[0];
+                    return std::make_tuple(playersIn[0], calcFullHandRank(cards));
                 }
                 else if ( numPlayers >= 2) {
                     // showdown
                     // Form hands from community cards and player cards
                     auto it = playersInBegin;
                     std::vector<std::vector<Card>> handList;
-                    std::for_each(playersInBegin, playersInEnd, [&](shared_ptr<Player> p) {
+                    std::for_each(playersInBegin, playersInEnd, [&](auto* p) {
                         std::vector<Card> h (p->hand);  // make a copy of the players hand
                         handList.emplace_back(h);
                     });
@@ -308,8 +275,6 @@ namespace Poker {
                         auto commCards = table.communityCards;
                         h.insert(h.end(), commCards.begin(), commCards.end() );       // append community cards to the end of the (copied) players hand
                     });
-                    
-
                     
                     // calculate full hand rank for each hand
                     std::vector<FullHandRank> FHRs;
@@ -324,15 +289,13 @@ namespace Poker {
                     advance(winningHandIterator, std::distance(FHRs.begin(), handWinnerFHR));
                     
                     
-                    for(size_t i = 0; i < FHRs.size(); i++ )
-                        (playersInBegin + i)->get()->FHR = FHRs[i];
+                    //for(size_t i = 0; i < FHRs.size(); i++ )
+                    //    (playersInBegin + i)->get()->FHR = FHRs[i];
 
-                    shared_ptr<Player> winningPlayer = playersIn[std::distance(handList.begin(), winningHandIterator)];
-                    return winningPlayer;
+                    Player* winningPlayer = playersIn[std::distance(handList.begin(), winningHandIterator)];
+                    return make_tuple(winningPlayer, *handWinnerFHR);
                 }
-                else {
-                    return nullptr;
-                }
+                return std::make_tuple(nullptr, nullFHR);
             }
             
             void print() {
@@ -346,31 +309,6 @@ namespace Poker {
                 std::cout << "Community cards: " << table.communityCards << std::endl;
                 std::cout << "Pot: " << table.pot << std::endl;
                 std::cout << "Current Bet: " << table.minimumBet << std::endl;
-            }
-
-            void printToFile(string filename) {
-                // writes table state to a csv
-                // columns: 
-                // street, pot, current minimum bet
-                // # of players, player 0 move, player 0 bet_amount, player 1 move, player 1 bet_amount, ... 
-                ofstream myFile(filename, std::ios_base::app);
-                size_t nPlayers = bettingPlayers.size();
-                /*
-                myFile << "street,pot,minimumBet,nplayers,";
-                for(int i=0; i<nPlayers; i++ ) {
-                    myFile << "player" << this->bettingPlayers[i]->playerID << "move,";
-                    myFile << "player" << this->bettingPlayers[i]->playerID << "betAmount";
-                    if( i != nPlayers-1 ) myFile << ",";
-                }
-                myFile << std::endl;
-                */
-                myFile << this->table.street << "," << this->table.pot << "," << this->table.minimumBet << "," << nPlayers << ",";
-                for(int i=0; i<nPlayers; i++ ) {
-                    myFile << bettingPlayers[i]->move.move << "," << bettingPlayers[i]->move.bet_amount;
-                    if( i != nPlayers-1 ) myFile << ",";
-                }
-                myFile << std::endl;
-                myFile.close();
             }
 
     };

@@ -19,6 +19,7 @@ namespace Poker {
             virtual PlayerMove makeMove(const std::shared_ptr<Table>& table, Player* me);
             virtual void callback( const std::shared_ptr<Table>& table, Player* me) {};
             virtual void updateParameters(std::vector<float>)  {};
+            PlayerMove simpleDressMove(const Move move, const float raiseMultiplier, const int minBet, const int bankroll);
             /*
             template<typename... Args>
                 void updateParameters(Args&&... args) {
@@ -41,12 +42,12 @@ namespace Poker {
             using Strategy::Strategy;
             PlayerMove makeMove(const std::shared_ptr<Table>& , Player* ) override;
     };
-    /*
     struct SingleMoveCallAI : public Strategy {
         public:
             using Strategy::Strategy;
             PlayerMove makeMove(const std::shared_ptr<Table>& , Player* ) override;
     };
+    /*
     struct SequenceMoveAI : public Strategy {
         // Strategy instance that follows a sequence of moves
         public:

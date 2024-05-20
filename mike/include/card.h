@@ -47,7 +47,7 @@ namespace Poker {
         {Rank::C_K, 'K'},
         {Rank::C_A, 'A'},
         {Rank::UNDEF_RANK, 'X'}
-    };
+  };
     class Card {
         public:
             Rank rank;

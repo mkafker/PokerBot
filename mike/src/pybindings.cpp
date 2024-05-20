@@ -17,7 +17,7 @@
 
 namespace Poker {
 
-
+/*
 void pyMonteCarloGames(const uint64_t& N) {
     vector<string> aiList = {"CFRAI1", "rand"};
     std::random_device rd;
@@ -45,9 +45,6 @@ void pyMonteCarloGames(const uint64_t& N) {
       myTable.resetCards(rd);
       game->table.setPlayerBankrolls(startingCash);
       game->setup();
-      game->moveRecord.clear();
-      game->tableRecord.clear();
-      game->printMovesToRecord = false;
       auto nPlayers = game->bettingPlayers.size();
       while( nPlayers > 1) {
           game->table.resetCards(rd);
@@ -100,12 +97,9 @@ void pyMonteCarloGames(const uint64_t& N) {
 
 }
 
-
 std::vector<Card> convertCharlesToMike(std::vector<std::tuple<int,int>> in) {
-    /* 
-    Charles's rank: 2-14 inclusive (A=14, 2=2)
-              suit: 1='S', 2='H', 3='D', 4='C'
-    */
+    //Charles's rank: 2-14 inclusive (A=14, 2=2)
+    //          suit: 1='S', 2='H', 3='D', 4='C'
     std::vector<Card> out;
     for(auto& pair : in) {
       Card n;
@@ -266,12 +260,8 @@ float pyTrainKillBot(const std::vector<float> mikeParams) {
 }
 
 
+*/
 #if PYTHON
-  /*
-  PYBIND11_MODULE(poker, m) {
-      m.def("MCGames", &pyMonteCarloRounds, "Monte Carlo Rounds",
-          pybind11::arg("N"), pybind11::arg("inputRBRraw"));
-  }*/
   PYBIND11_MODULE(poker, m) {
       m.def("showdownHands", &pyShowdownHands, "showdown hands",
           pybind11::arg("cardsA"), pybind11::arg("cardsB"), pybind11::arg("commCards"));
@@ -284,4 +274,5 @@ float pyTrainKillBot(const std::vector<float> mikeParams) {
   }
 
 #endif
+
 }

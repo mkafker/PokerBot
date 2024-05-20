@@ -117,19 +117,8 @@ namespace Poker{
             int  bankroll;
             int  playerID;
             PlayerPosition  position;
-            PlayerMove  move; // remove? 
-            FullHandRank FHR; // remove?
             std::vector<Card> hand;
             std::shared_ptr<Strategy> strategy;
-            // add player move history here?
-            
-            Player() = default;
-            Player(const Player& p) = default;
-            Player(Player&& p) = default;
-            ~Player() = default;
-            Player(int p);
-            Player(PlayerPosition p);
-            Player(int p, int playerID);
 
             const PlayerPosition getPosition() const { return this->position; };
             const int getBankroll() const { return this->bankroll; };

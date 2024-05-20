@@ -3,15 +3,12 @@
 #include <random>
 
 namespace Poker{
-    Player::Player(PlayerPosition p) : position { p } {};
-    Player::Player(int p)  { playerID = p; };
-    Player::Player(int pos, int pID) { position = static_cast<PlayerPosition>(pos); playerID = pID; }
     
     PlayerMove Player::makeMove(const shared_ptr<Table>& info) {
         if ( ! strategy ) 
             strategy = make_unique<Strategy>();
         PlayerMove move = this->strategy->makeMove(info, this);
-        this->move = move;
+        //this->move = move;
         return move;
     }
 
