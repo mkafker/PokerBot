@@ -14,19 +14,19 @@
 
 using namespace Poker;
 int main() {
-    const auto N = 100000;
+    const auto N = 1000;
     auto start = std::chrono::steady_clock::now();
     auto aiInfo = std::multimap<std::string, std::vector<float>>();
     //aiInfo.emplace("KillBot", std::vector<float>{});
     //aiInfo.emplace("Matt", std::vector<float> {0.44, 0.46, 0.54});
     aiInfo.emplace("call", std::vector<float>{});
-    aiInfo.emplace("random", std::vector<float>{});
-    aiInfo.emplace("random", std::vector<float>{});
-    aiInfo.emplace("random", std::vector<float>{});
-    aiInfo.emplace("random", std::vector<float>{});
-    aiInfo.emplace("random", std::vector<float>{});
-    aiInfo.emplace("random", std::vector<float>{});
-    aiInfo.emplace("random", std::vector<float>{});
+    aiInfo.emplace("call", std::vector<float>{});
+    aiInfo.emplace("call", std::vector<float>{});
+    aiInfo.emplace("call", std::vector<float>{});
+    aiInfo.emplace("call", std::vector<float>{});
+    aiInfo.emplace("call", std::vector<float>{});
+    aiInfo.emplace("call", std::vector<float>{});
+    aiInfo.emplace("call", std::vector<float>{});
   auto [avg, sigma] = monteCarloGames(N, aiInfo);
     std::cout << avg << std::endl;
     std::cout << sigma << std::endl;
