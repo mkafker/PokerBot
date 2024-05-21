@@ -150,7 +150,7 @@ namespace Poker {
                         transferAmount[b] = bankroll;
                     }
                 }
-
+                auto tablePtr = make_shared<Table>(table);
                 // Begin the actual round
                 while( table.street <= Street::RIVER ) {
                     table.dealCommunityCards( table.street );
@@ -174,7 +174,7 @@ namespace Poker {
 
                         while (i != bettingPlayers.end()) {
                             auto P = *i;
-                            PlayerMove Pmove =  P->makeMove(make_shared<Table>(table));
+                            PlayerMove Pmove =  P->makeMove(tablePtr);
                             if ( !table.skipTurn ) {
                                 table.playerMoveMap[P].emplace_back(Pmove);
                                 const bool allIn = Pmove.move == Move::MOVE_ALLIN;

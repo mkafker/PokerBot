@@ -14,7 +14,7 @@
 
 using namespace Poker;
 int main() {
-    const auto N = 1000;
+    const auto N = 100000;
     auto start = std::chrono::steady_clock::now();
     auto aiInfo = std::multimap<std::string, std::vector<float>>();
     //aiInfo.emplace("KillBot", std::vector<float>{});
@@ -27,7 +27,7 @@ int main() {
     aiInfo.emplace("call", std::vector<float>{});
     aiInfo.emplace("call", std::vector<float>{});
     aiInfo.emplace("call", std::vector<float>{});
-  auto [avg, sigma] = monteCarloGames(N, aiInfo);
+  auto [avg, sigma] = monteCarloRounds(N, aiInfo);
     std::cout << avg << std::endl;
     std::cout << sigma << std::endl;
     std::chrono::duration<double> duration = std::chrono::steady_clock::now() - start;

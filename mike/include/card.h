@@ -71,14 +71,10 @@ namespace Poker {
 
 
     class Deck {
-        private:
-            std::mt19937_64 rng;
         public:
             std::vector<Card> cards;         // array to hold cards
             Deck() {
                 cards = std::vector<Card>(52);
-                std::random_device rd;
-                rng.seed(rd());
                 constexpr int nRanks = 13;
                 for(int i=0; i<nRanks; i++) {
                     cards[4*i]  =Card(static_cast<Rank>(i), Suit::CLUB);
@@ -86,10 +82,6 @@ namespace Poker {
                     cards[4*i+2]=Card(static_cast<Rank>(i), Suit::HEART);
                     cards[4*i+3]=Card(static_cast<Rank>(i), Suit::SPADE);
                 }
-            }
-            void setSeed(uint64_t seed) { rng.seed(seed); }
-            void shuffle() {
-                std::shuffle(cards.begin(), cards.end(), rng);
             }
             size_t size() const { return cards.size(); }
             const Card pop_card() {
@@ -105,8 +97,6 @@ namespace Poker {
             Deck(std::vector<Card> cardComplement) {
             // Deck constructor for all cards EXCEPT the argument
             // TODO: make this fast
-            std::random_device rd;
-            rng.seed(rd());
             constexpr int nRanks = 13;
             cards = std::vector<Card>(52);
             for(int i=0; i<nRanks; i++) {

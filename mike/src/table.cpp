@@ -96,10 +96,6 @@ namespace Poker {
         }
     }
 
-    void Table::shuffleDeck() {
-        // Make sure deck has it's mersenne twister primed before calling this or you got a one-way ticket to segfault city
-        this->deck.shuffle();
-    }
 
     void Table::resetCards(random_device& rd) {
         // Resets all cards everywhere and gets a fresh RNG for the deck. 

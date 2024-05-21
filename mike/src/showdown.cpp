@@ -241,7 +241,8 @@ namespace Poker {
 
   FullHandRank generateRandomFHR() {
     Deck tmp;
-    tmp.shuffle();
+    //tmp.shuffle();
+    //TODO: fix
     std::vector<Card> tmphand(7);
     for(auto& a : tmphand) 
         a = tmp.pop_card();

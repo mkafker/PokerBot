@@ -11,11 +11,12 @@
 #include <sstream>
 
 namespace Poker {
+  /*
   void benchmarkHandRankCalculator(const uint64_t& N, const uint16_t Ndeal) {
       auto start = std::chrono::steady_clock::now();
       FullHandRank lastHand;
         Deck newdeck;
-        newdeck.shuffle();
+        //newdeck.shuffle();
     int t = 0;
         std::vector<Card> cards(Ndeal);
       for(int iN = 0; iN < N; iN++) {
@@ -57,7 +58,7 @@ namespace Poker {
     std::cout << N << " rounds calculated in " << duration.count() << " seconds, or " << double(N)/duration.count() << " rounds/second" << std::endl;
   }
 
-
+*/
 std::tuple<double, double> monteCarloRounds(const uint64_t& N, const std::multimap<std::string, std::vector<float>>& aiInfo) {
     // input: N games, vector of tuples ( Ai type string, ai parameters )
     // Returns (avg win rate, variance of win rate) of player 0
@@ -141,7 +142,6 @@ std::tuple<double, double> monteCarloGames(const uint64_t& N, const std::multima
     // setup some statistics
     vector<int> pZeroWinnings (N);
 
-    auto start = std::chrono::steady_clock::now();
     int iT = 0;
     int totalRounds = 0;
     const int startingCash = 100;
@@ -149,14 +149,10 @@ std::tuple<double, double> monteCarloGames(const uint64_t& N, const std::multima
         game->table.setPlayerBankrolls(startingCash);
         game->setup();
         game->doGame();
-        //pZeroWinnings[iN] = (game->table.getPlayerByID(0)->bankroll - startingCash)/myTable.bigBlind; // dimensionless winnings
         pZeroWinnings[iN] = *game->lastRoundWinner == *game->table.getPlayerByID(0) ? 1 : 0;
         totalRounds+=game->roundCount;
     }
 
-    std::chrono::duration<double> duration = std::chrono::steady_clock::now() - start;
-    //std::cout << N << " games (" << totalRounds << " rounds) calculated in " << duration.count() << " seconds, or " 
-    //<< double(N)/duration.count() << " games/s (" << double(totalRounds)/duration.count() << " rounds/s)" << std::endl;
 
     double avgReturn = 0.0;
     for( const auto& w : pZeroWinnings )
@@ -171,7 +167,7 @@ std::tuple<double, double> monteCarloGames(const uint64_t& N, const std::multima
     sigmaReturn = sqrt(sigmaReturn);
     return std::make_tuple(avgReturn, sigmaReturn);
 }
-
+/*
 
 std::tuple<double,double> monteCarloSingleHand(const std::vector<Card>& cardsA, const int numCommCards, const int numOtherPlayers, const uint64_t N) {
     std::random_device rd;
@@ -372,7 +368,6 @@ void monteCarloRandomHand(const int numCommCards, const int numOtherPlayers, con
         }
         return ret;
     };
-    /*
     std::vector<std::future<std::string>> futures;
     std::vector<std::string> results;
     for(int j = 0; j < numThreads; j++)
@@ -382,11 +377,10 @@ void monteCarloRandomHand(const int numCommCards, const int numOtherPlayers, con
     for( auto& str : results)
         outFile << str;
     outFile.close();
-    */
 
 }
     
-
+*/
 
 
 
